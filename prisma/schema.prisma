@@ -1,18 +1,24 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
 }
 
-generator client {
-  provider = "prisma-client-js"
+datasource db {
+  provider = "postgresql"
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
+  id            String   @id @default(uuid()) @db.Uuid
   email         String   @unique
-  password      String
-  homeDirectory String?
+  /// Dovecot-compatible hash with scheme prefix, e.g. {ARGON2ID}$argon2id$...
+  passwordHash  String   @map("password_hash")
+  homeDirectory String?  @map("home_directory")
   maildir       String?
   active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
 }
