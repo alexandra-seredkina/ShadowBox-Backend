@@ -1,0 +1,22 @@
+name: Semgrep
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: >-
+          semgrep scan --error --metrics=off
+          --config p/typescript
+          --config p/owasp-top-ten
+          --config p/secrets
