@@ -7,4 +7,5 @@ COPY snippets/ /etc/nginx/snippets/
 
 EXPOSE 80 443
 
+# nosemgrep: missing-user -- master-процессу нужен root для портов 80/443, воркеры работают от nginx
 CMD ["nginx", "-g", "daemon off;"]
