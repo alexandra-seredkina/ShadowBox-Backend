@@ -1,4 +1,4 @@
-import { envSchema } from './env.schema.js';
+import { envSchema, LogLevel } from './env.schema.js';
 
 export class ConfigValidationError extends Error {
   constructor(readonly issues: readonly string[]) {
@@ -7,11 +7,22 @@ export class ConfigValidationError extends Error {
   }
 }
 
-export class AppConfig {
-  constructor(
-    readonly port: number,
-    readonly databaseUrl: string,
-  ) {}
+export interface AppConfigValues {
+  readonly port: number;
+  readonly databaseUrl: string;
+  readonly logLevel: LogLevel;
+}
+
+export class AppConfig implements AppConfigValues {
+  readonly port: number;
+  readonly databaseUrl: string;
+  readonly logLevel: LogLevel;
+
+  constructor(values: AppConfigValues) {
+    this.port = values.port;
+    this.databaseUrl = values.databaseUrl;
+    this.logLevel = values.logLevel;
+  }
 }
 
 /**
@@ -29,5 +40,9 @@ export function loadConfig(
       ),
     );
   }
-  return new AppConfig(result.data.PORT, result.data.DATABASE_URL);
+  return new AppConfig({
+    port: result.data.PORT,
+    databaseUrl: result.data.DATABASE_URL,
+    logLevel: result.data.LOG_LEVEL,
+  });
 }

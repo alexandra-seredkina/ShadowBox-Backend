@@ -13,10 +13,17 @@ describe('loadConfig', () => {
     expect(config.databaseUrl).toBe(validEnv.DATABASE_URL);
   });
 
-  it('defaults the port to 3000', () => {
+  it('applies defaults for optional variables', () => {
     const config = loadConfig({ DATABASE_URL: validEnv.DATABASE_URL });
 
     expect(config.port).toBe(3000);
+    expect(config.logLevel).toBe('info');
+  });
+
+  it('rejects an unknown log level', () => {
+    expect(() => loadConfig({ ...validEnv, LOG_LEVEL: 'verbose' })).toThrow(
+      ConfigValidationError,
+    );
   });
 
   it('rejects a missing database url', () => {
