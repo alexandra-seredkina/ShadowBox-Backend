@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
+import { AppConfig } from './../src/config/app-config.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
 
 describe('HealthController (e2e)', () => {
@@ -12,6 +13,8 @@ describe('HealthController (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
+      .overrideProvider(AppConfig)
+      .useValue(new AppConfig(3000, 'postgresql://test@localhost/test'))
       .overrideProvider(PrismaService)
       .useValue({ $queryRaw: vi.fn().mockResolvedValue([]) })
       .compile();
