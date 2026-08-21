@@ -9,16 +9,245 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String   @id @default(uuid()) @db.Uuid
-  email         String   @unique
-  /// Dovecot-compatible hash with scheme prefix, e.g. {ARGON2ID}$argon2id$...
-  passwordHash  String   @map("password_hash")
-  homeDirectory String?  @map("home_directory")
-  maildir       String?
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+enum AliasKind {
+  permanent
+  temporary
 
-  @@map("users")
+  @@map("alias_kind")
+}
+
+/// `revoked` is terminal: the address is never issued again.
+enum AliasStatus {
+  active
+  disabled
+  revoked
+
+  @@map("alias_status")
+}
+
+enum FolderKind {
+  system
+  custom
+
+  @@map("folder_kind")
+}
+
+enum FolderSystemRole {
+  inbox
+  spam
+  trash
+
+  @@map("folder_system_role")
+}
+
+enum ThreatVerdict {
+  safe
+  caution
+  danger
+
+  @@map("threat_verdict")
+}
+
+enum ThreatMarker {
+  UNKNOWN_SENDER
+  AUTH_FAILED
+  DISPLAY_NAME_SPOOF
+  LOOKALIKE_DOMAIN
+  LINK_MISMATCH
+  DANGEROUS_ATTACHMENT
+
+  @@map("threat_marker")
+}
+
+enum AuthResult {
+  pass
+  fail
+  none
+
+  @@map("auth_result")
+}
+
+enum PowPurpose {
+  register
+  login
+
+  @@map("pow_purpose")
+}
+
+model Account {
+  id                                    String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// NFKC + lower-case. Used only to sign in, never shown as an address.
+  login                                 String   @unique @db.VarChar(32)
+  /// Argon2id of the client-derived authKey, encoded with its parameters.
+  authKeyHash                           String   @map("auth_key_hash")
+  kdfAlgorithm                          String   @map("kdf_algorithm") @db.VarChar(32)
+  kdfSalt                               Bytes    @map("kdf_salt")
+  kdfOpsLimit                           Int      @map("kdf_ops_limit")
+  kdfMemLimitBytes                      Int      @map("kdf_mem_limit_bytes")
+  publicKey                             Bytes    @map("public_key")
+  encryptedPrivateKeyNonce              Bytes    @map("encrypted_private_key_nonce")
+  encryptedPrivateKeyCiphertext         Bytes    @map("encrypted_private_key_ciphertext")
+  recoveryEncryptedPrivateKeyNonce      Bytes    @map("recovery_encrypted_private_key_nonce")
+  recoveryEncryptedPrivateKeyCiphertext Bytes    @map("recovery_encrypted_private_key_ciphertext")
+  isIpBindingEnabled                    Boolean  @default(true) @map("is_ip_binding_enabled")
+  createdAt                             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions           Session[]
+  aliases            Alias[]
+  folders            Folder[]
+  messages           Message[]
+  knownSenders       KnownSender[]
+  idempotencyRecords IdempotencyRecord[]
+
+  @@map("accounts")
+}
+
+model Session {
+  id               String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  accountId        String    @map("account_id") @db.Uuid
+  /// SHA-256 of the cookie token; the token itself is never stored.
+  tokenHash        Bytes     @unique @map("token_hash")
+  /// HMAC-SHA256 of the client IP under the key version below, never the IP.
+  ipHash           Bytes     @map("ip_hash")
+  ipHashKeyVersion Int       @map("ip_hash_key_version") @db.SmallInt
+  isIpBound        Boolean   @map("is_ip_bound")
+  /// Coarse "browser · OS", the full User-Agent is not kept.
+  device           String    @db.VarChar(64)
+  reauthUntil      DateTime? @map("reauth_until") @db.Timestamptz(3)
+  lastActiveAt     DateTime  @default(now()) @map("last_active_at") @db.Timestamptz(3)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Alias {
+  id             String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// Becomes null when the account is deleted; the row stays so the address is never reissued.
+  accountId      String?     @map("account_id") @db.Uuid
+  localPart      String      @map("local_part") @db.VarChar(64)
+  domain         String      @db.VarChar(253)
+  kind           AliasKind
+  status         AliasStatus @default(active)
+  /// EncryptedBlob v1, sealed by the client.
+  encryptedLabel Json?       @map("encrypted_label")
+  folderId       String?     @map("folder_id") @db.Uuid
+  expiresAt      DateTime?   @map("expires_at") @db.Timestamptz(3)
+  revokedAt      DateTime?   @map("revoked_at") @db.Timestamptz(3)
+  lastReceivedAt DateTime?   @map("last_received_at") @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  account  Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  folder   Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  messages Message[]
+
+  @@unique([localPart, domain])
+  @@index([accountId, status, createdAt(sort: Desc)])
+  @@index([status, expiresAt])
+  @@map("aliases")
+}
+
+model Folder {
+  id            String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  accountId     String            @map("account_id") @db.Uuid
+  kind          FolderKind
+  systemRole    FolderSystemRole? @map("system_role")
+  /// EncryptedBlob v1, only for custom folders.
+  encryptedName Json?             @map("encrypted_name")
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  account  Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  aliases  Alias[]
+  messages Message[]
+
+  /// Target of the composite key on messages: a message can only sit in a folder of its own account.
+  @@unique([id, accountId])
+  @@unique([accountId, systemRole])
+  @@map("folders")
+}
+
+model Message {
+  id               String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  accountId        String         @map("account_id") @db.Uuid
+  folderId         String         @map("folder_id") @db.Uuid
+  aliasId          String?        @map("alias_id") @db.Uuid
+  receivedAt       DateTime       @map("received_at") @db.Timestamptz(3)
+  isRead           Boolean        @default(false) @map("is_read")
+  /// Rounded up to 1 KiB.
+  sizeBytes        Int            @map("size_bytes")
+  threatVerdict    ThreatVerdict  @map("threat_verdict")
+  threatMarkers    ThreatMarker[] @default([]) @map("threat_markers")
+  spfResult        AuthResult     @map("spf_result")
+  dkimResult       AuthResult     @map("dkim_result")
+  dmarcResult      AuthResult     @map("dmarc_result")
+  /// EncryptedBlob v1 with from, subject, snippet, hasAttachments.
+  encryptedPreview Json           @map("encrypted_preview")
+  /// Parts of the EncryptedBlob holding the raw MIME, kept as bytes to avoid base64 overhead.
+  bodyBlobVersion  Int            @map("body_blob_version") @db.SmallInt
+  bodySealedKey    Bytes          @map("body_sealed_key")
+  bodyNonce        Bytes          @map("body_nonce")
+  bodyCiphertext   Bytes          @map("body_ciphertext")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  /// NoAction is checked at the end of the statement, so deleting an account cascades through both.
+  folder  Folder  @relation(fields: [folderId, accountId], references: [id, accountId], onDelete: NoAction)
+  alias   Alias?  @relation(fields: [aliasId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, folderId, receivedAt(sort: Desc), id(sort: Desc)])
+  @@index([folderId, isRead])
+  @@map("messages")
+}
+
+/// D-009: only an HMAC of the sender under a versioned key, no timestamps.
+model KnownSender {
+  accountId      String @map("account_id") @db.Uuid
+  senderHash     Bytes  @map("sender_hash")
+  hashKeyVersion Int    @map("hash_key_version") @db.SmallInt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, senderHash])
+  @@map("known_senders")
+}
+
+/// One-time: consumed by deleting the row.
+model PowChallenge {
+  id         String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  purpose    PowPurpose
+  prefix     Bytes
+  difficulty Int        @db.SmallInt
+  expiresAt  DateTime   @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("pow_challenges")
+}
+
+model IdempotencyRecord {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  key            String   @unique @db.Uuid
+  /// Null for anonymous operations such as registration.
+  accountId      String?  @map("account_id") @db.Uuid
+  operation      String   @db.VarChar(64)
+  /// SHA-256 of the canonical request body, to detect reuse with another body.
+  requestHash    Bytes    @map("request_hash")
+  responseStatus Int      @map("response_status") @db.SmallInt
+  responseBody   Json     @map("response_body")
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  account Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([accountId])
+  @@map("idempotency_records")
 }
