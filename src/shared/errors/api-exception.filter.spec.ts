@@ -84,6 +84,32 @@ describe('ApiExceptionFilter', () => {
     );
   });
 
+  it('maps a body-parser size error to PAYLOAD_TOO_LARGE', () => {
+    const { host, status, json } = createHost();
+    const tooLarge = Object.assign(new Error('request entity too large'), {
+      status: 413,
+      expose: true,
+    });
+
+    filter.catch(tooLarge, host);
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.PAYLOAD_TOO_LARGE);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({ code: 'PAYLOAD_TOO_LARGE' }),
+      }),
+    );
+  });
+
+  it('does not trust a status on errors that are not marked exposable', () => {
+    const { host, status } = createHost();
+    const internal = Object.assign(new Error('db failure'), { status: 404 });
+
+    filter.catch(internal, host);
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+  });
+
   it('treats an http status without an API code as internal', () => {
     const { host, status } = createHost();
 

@@ -94,6 +94,26 @@ export class ApiExceptionFilter implements ExceptionFilter {
   }
 }
 
+/** Errors from Express middleware such as body-parser, built with http-errors. */
+function isExposedHttpError(
+  exception: unknown,
+): exception is { status: number; expose: true } {
+  return (
+    exception instanceof Error &&
+    'status' in exception &&
+    typeof exception.status === 'number' &&
+    'expose' in exception &&
+    exception.expose === true
+  );
+}
+
+function findHttpStatus(exception: unknown): number | undefined {
+  if (exception instanceof HttpException) {
+    return exception.getStatus();
+  }
+  return isExposedHttpError(exception) ? exception.status : undefined;
+}
+
 function mapException(exception: unknown): MappedError {
   if (exception instanceof DomainError) {
     return {
@@ -102,12 +122,9 @@ function mapException(exception: unknown): MappedError {
       message: exception.message,
     };
   }
-  if (exception instanceof HttpException) {
-    const status = exception.getStatus();
-    const known = FRAMEWORK_ERRORS.get(status);
-    if (known !== undefined) {
-      return { status, ...known };
-    }
-  }
-  return INTERNAL_ERROR;
+  const status = findHttpStatus(exception);
+  const known = status === undefined ? undefined : FRAMEWORK_ERRORS.get(status);
+  return status === undefined || known === undefined
+    ? INTERNAL_ERROR
+    : { status, ...known };
 }

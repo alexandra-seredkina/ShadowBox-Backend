@@ -3,6 +3,7 @@ import { ConfigValidationError, loadConfig } from './app-config.js';
 const validEnv = {
   DATABASE_URL: 'postgresql://user:secret-pass@localhost:5432/db',
   PORT: '4000',
+  ALLOWED_ORIGINS: 'http://localhost:8080, http://127.0.0.1:8080/',
 };
 
 describe('loadConfig', () => {
@@ -14,11 +15,32 @@ describe('loadConfig', () => {
   });
 
   it('applies defaults for optional variables', () => {
-    const config = loadConfig({ DATABASE_URL: validEnv.DATABASE_URL });
+    const config = loadConfig({
+      DATABASE_URL: validEnv.DATABASE_URL,
+      ALLOWED_ORIGINS: validEnv.ALLOWED_ORIGINS,
+    });
 
     expect(config.port).toBe(3000);
     expect(config.logLevel).toBe('info');
   });
+
+  it('normalizes allowed origins', () => {
+    const config = loadConfig(validEnv);
+
+    expect(config.allowedOrigins).toEqual([
+      'http://localhost:8080',
+      'http://127.0.0.1:8080',
+    ]);
+  });
+
+  it.each(['', 'localhost:8080', 'ftp://localhost'])(
+    'rejects allowed origins %j',
+    (origins) => {
+      expect(() =>
+        loadConfig({ ...validEnv, ALLOWED_ORIGINS: origins }),
+      ).toThrow(ConfigValidationError);
+    },
+  );
 
   it('rejects an unknown log level', () => {
     expect(() => loadConfig({ ...validEnv, LOG_LEVEL: 'verbose' })).toThrow(
@@ -27,12 +49,17 @@ describe('loadConfig', () => {
   });
 
   it('rejects a missing database url', () => {
-    expect(() => loadConfig({ PORT: '4000' })).toThrow(ConfigValidationError);
+    const { DATABASE_URL: _omitted, ...withoutUrl } = validEnv;
+
+    expect(() => loadConfig(withoutUrl)).toThrow(ConfigValidationError);
   });
 
   it('rejects a non-postgres database url', () => {
     expect(() =>
-      loadConfig({ DATABASE_URL: 'mysql://user:pass@localhost/db' }),
+      loadConfig({
+        ...validEnv,
+        DATABASE_URL: 'mysql://user:pass@localhost/db',
+      }),
     ).toThrow(ConfigValidationError);
   });
 
@@ -43,7 +70,10 @@ describe('loadConfig', () => {
   });
 
   it('does not leak variable values into the error', () => {
-    const leaky = { DATABASE_URL: 'mysql://user:secret-pass@host/db' };
+    const leaky = {
+      ...validEnv,
+      DATABASE_URL: 'mysql://user:secret-pass@host/db',
+    };
 
     expect(() => loadConfig(leaky)).toThrow(
       expect.objectContaining({

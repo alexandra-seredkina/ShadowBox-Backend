@@ -11,17 +11,20 @@ export interface AppConfigValues {
   readonly port: number;
   readonly databaseUrl: string;
   readonly logLevel: LogLevel;
+  readonly allowedOrigins: readonly string[];
 }
 
 export class AppConfig implements AppConfigValues {
   readonly port: number;
   readonly databaseUrl: string;
   readonly logLevel: LogLevel;
+  readonly allowedOrigins: readonly string[];
 
   constructor(values: AppConfigValues) {
     this.port = values.port;
     this.databaseUrl = values.databaseUrl;
     this.logLevel = values.logLevel;
+    this.allowedOrigins = values.allowedOrigins;
   }
 }
 
@@ -44,5 +47,6 @@ export function loadConfig(
     port: result.data.PORT,
     databaseUrl: result.data.DATABASE_URL,
     logLevel: result.data.LOG_LEVEL,
+    allowedOrigins: result.data.ALLOWED_ORIGINS,
   });
 }
