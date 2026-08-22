@@ -20,5 +20,75 @@
   "env": {
     "node": true
   },
-  "ignorePatterns": ["src/generated/**", "dist/**"]
+  "ignorePatterns": ["src/generated/**", "dist/**"],
+  "overrides": [
+    {
+      "files": ["src/modules/*/domain/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@nestjs/*",
+                  "@prisma/*",
+                  "express",
+                  "node:fs",
+                  "node:fs/*",
+                  "**/generated/**",
+                  "**/application/**",
+                  "**/infrastructure/**",
+                  "**/presentation/**"
+                ],
+                "message": "domain/ is plain TypeScript: no framework, ORM or outer layers"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/modules/*/application/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@prisma/*",
+                  "express",
+                  "**/generated/**",
+                  "**/infrastructure/**",
+                  "**/presentation/**"
+                ],
+                "message": "application/ depends on ports declared in domain/, not on adapters"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/modules/*/presentation/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@prisma/*",
+                  "**/generated/**",
+                  "**/infrastructure/**"
+                ],
+                "message": "presentation/ calls use cases, it never touches persistence"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

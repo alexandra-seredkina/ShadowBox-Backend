@@ -6,7 +6,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/app.setup.js';
 import { AppConfig } from './../src/config/app-config.js';
-import { PrismaService } from './../src/prisma/prisma.service.js';
+import { PrismaService } from './../src/infrastructure/prisma/prisma.service.js';
 
 const ALLOWED_ORIGIN = 'http://localhost:8080';
 
