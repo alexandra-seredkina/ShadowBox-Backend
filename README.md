@@ -98,7 +98,7 @@ ShadowBox/
 Запуск:
 
 ```bash
-cp .env.example .env   # задайте свой POSTGRES_PASSWORD
+cp .env.example .env   # задайте POSTGRES_PASSWORD и PRELOGIN_SALT_KEY
 docker compose up --build
 ```
 
@@ -113,6 +113,16 @@ docker compose up --build
 ```bash
 docker compose up --build -V
 ```
+
+Тесты:
+
+```bash
+npm test                  # юнит-тесты
+npm run test:e2e          # HTTP-конвейер целиком, без базы
+DATABASE_URL=postgresql://… npm run test:integration   # репозитории на настоящем Postgres
+```
+
+Интеграционные тесты применяют миграции и очищают таблицы, поэтому им нужна отдельная одноразовая база, а не та, что в `docker compose`.
 
 Новая миграция после изменения `prisma/schema.prisma`:
 

@@ -8,6 +8,10 @@ import {
 import type { Request, Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
 import { DomainError, DomainErrorKind } from './domain-error.js';
+import {
+  ValidationFailedError,
+  ValidationIssue,
+} from './validation-failed.error.js';
 
 const STATUS_BY_KIND: Record<DomainErrorKind, HttpStatus> = {
   invalid_input: HttpStatus.BAD_REQUEST,
@@ -52,6 +56,7 @@ interface ApiErrorBody {
     readonly code: string;
     readonly message: string;
     readonly requestId: string;
+    readonly details?: readonly ValidationIssue[];
   };
 }
 
@@ -59,6 +64,7 @@ interface MappedError {
   readonly status: number;
   readonly code: string;
   readonly message: string;
+  readonly details?: readonly ValidationIssue[];
 }
 
 const INTERNAL_ERROR: MappedError = {
@@ -88,6 +94,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
         code: mapped.code,
         message: mapped.message,
         requestId: typeof request.id === 'string' ? request.id : 'unknown',
+        ...(mapped.details === undefined ? {} : { details: mapped.details }),
       },
     };
     response.status(mapped.status).json(body);
@@ -120,6 +127,9 @@ function mapException(exception: unknown): MappedError {
       status: STATUS_BY_KIND[exception.kind],
       code: exception.code,
       message: exception.message,
+      ...(exception instanceof ValidationFailedError
+        ? { details: exception.details }
+        : {}),
     };
   }
   const status = findHttpStatus(exception);

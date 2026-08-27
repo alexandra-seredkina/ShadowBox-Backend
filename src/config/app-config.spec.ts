@@ -4,6 +4,7 @@ const validEnv = {
   DATABASE_URL: 'postgresql://user:secret-pass@localhost:5432/db',
   PORT: '4000',
   ALLOWED_ORIGINS: 'http://localhost:8080, http://127.0.0.1:8080/',
+  PRELOGIN_SALT_KEY: Buffer.alloc(32, 7).toString('base64url'),
 };
 
 describe('loadConfig', () => {
@@ -15,13 +16,12 @@ describe('loadConfig', () => {
   });
 
   it('applies defaults for optional variables', () => {
-    const config = loadConfig({
-      DATABASE_URL: validEnv.DATABASE_URL,
-      ALLOWED_ORIGINS: validEnv.ALLOWED_ORIGINS,
-    });
+    const { PORT: _omitted, ...withoutPort } = validEnv;
+    const config = loadConfig(withoutPort);
 
     expect(config.port).toBe(3000);
     expect(config.logLevel).toBe('info');
+    expect(config.powDifficulty).toBe(20);
   });
 
   it('normalizes allowed origins', () => {
@@ -41,6 +41,34 @@ describe('loadConfig', () => {
       ).toThrow(ConfigValidationError);
     },
   );
+
+  it('decodes the prelogin salt key', () => {
+    const config = loadConfig(validEnv);
+
+    expect(Buffer.from(config.preloginSaltKey)).toEqual(Buffer.alloc(32, 7));
+  });
+
+  it.each([
+    ['too short', Buffer.alloc(16).toString('base64url')],
+    ['not base64url', 'not a key!'],
+    ['empty', ''],
+  ])('rejects a prelogin salt key that is %s', (_case, key) => {
+    expect(() => loadConfig({ ...validEnv, PRELOGIN_SALT_KEY: key })).toThrow(
+      ConfigValidationError,
+    );
+  });
+
+  it('does not leak the prelogin salt key into the error', () => {
+    const weakKey = Buffer.from('short-secret-key').toString('base64url');
+
+    expect(() =>
+      loadConfig({ ...validEnv, PRELOGIN_SALT_KEY: weakKey }),
+    ).toThrow(
+      expect.objectContaining({
+        message: expect.not.stringContaining(weakKey),
+      }),
+    );
+  });
 
   it('rejects an unknown log level', () => {
     expect(() => loadConfig({ ...validEnv, LOG_LEVEL: 'verbose' })).toThrow(

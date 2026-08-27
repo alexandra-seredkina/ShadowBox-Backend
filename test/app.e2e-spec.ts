@@ -1,21 +1,10 @@
 import { Body, Controller, Get, Module, Post } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
-import { configureApp } from './../src/app.setup.js';
-import { AppConfig } from './../src/config/app-config.js';
-import { PrismaService } from './../src/infrastructure/prisma/prisma.service.js';
-
-const ALLOWED_ORIGIN = 'http://localhost:8080';
-
-const testConfig = new AppConfig({
-  port: 3000,
-  databaseUrl: 'postgresql://test@localhost/test',
-  logLevel: 'silent',
-  allowedOrigins: [ALLOWED_ORIGIN],
-});
+import { createTestApp } from './support/create-test-app.js';
+import { TEST_ALLOWED_ORIGIN as ALLOWED_ORIGIN } from './support/test-config.js';
 
 @Controller('probe')
 class ProbeController {
@@ -40,20 +29,7 @@ describe('App (e2e)', () => {
 
   beforeEach(async () => {
     prisma.$queryRaw.mockReset().mockResolvedValue([]);
-    const moduleRef = await Test.createTestingModule({
-      imports: [TestAppModule],
-    })
-      .overrideProvider(AppConfig)
-      .useValue(testConfig)
-      .overrideProvider(PrismaService)
-      .useValue(prisma)
-      .compile();
-
-    app = moduleRef.createNestApplication<NestExpressApplication>({
-      bodyParser: false,
-    });
-    configureApp(app);
-    await app.init();
+    app = await createTestApp({ rootModule: TestAppModule, prisma });
     server = app.getHttpServer();
   });
 

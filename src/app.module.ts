@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from './config/config.module.js';
 import { HealthController } from './health/health.controller.js';
+import { ClockModule } from './infrastructure/clock/clock.module.js';
 import { CryptoModule } from './infrastructure/crypto/crypto.module.js';
 import { OriginGuard } from './infrastructure/http/origin.guard.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
@@ -19,6 +20,7 @@ import { ApiExceptionFilter } from './shared/errors/api-exception.filter.js';
     ConfigModule,
     LoggingModule,
     PrismaModule,
+    ClockModule,
     CryptoModule,
     IdentityModule,
     AliasModule,

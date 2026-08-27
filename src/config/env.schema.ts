@@ -24,11 +24,22 @@ const originListSchema = z
   .transform((value) => value.split(',').map((origin) => origin.trim()))
   .pipe(z.array(originSchema).min(1));
 
+const MIN_SECRET_KEY_BYTES = 32;
+
+/** base64url without padding, at least 256 bits once decoded. */
+const secretKeySchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]+$/)
+  .transform((value) => Buffer.from(value, 'base64url'))
+  .refine((key) => key.length >= MIN_SECRET_KEY_BYTES);
+
 export const envSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   PORT: z.coerce.number().int().min(1).max(65_535).default(DEFAULT_PORT),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   ALLOWED_ORIGINS: originListSchema,
+  PRELOGIN_SALT_KEY: secretKeySchema,
+  POW_DIFFICULTY: z.coerce.number().int().min(1).max(32).default(20),
 });
 
 export type Env = z.infer<typeof envSchema>;

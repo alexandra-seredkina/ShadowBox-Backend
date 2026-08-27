@@ -12,6 +12,9 @@ export interface AppConfigValues {
   readonly databaseUrl: string;
   readonly logLevel: LogLevel;
   readonly allowedOrigins: readonly string[];
+  /** HMAC key for decoy KDF salts. Never rotated: see DecoySaltSource. */
+  readonly preloginSaltKey: Uint8Array;
+  readonly powDifficulty: number;
 }
 
 export class AppConfig implements AppConfigValues {
@@ -19,12 +22,16 @@ export class AppConfig implements AppConfigValues {
   readonly databaseUrl: string;
   readonly logLevel: LogLevel;
   readonly allowedOrigins: readonly string[];
+  readonly preloginSaltKey: Uint8Array;
+  readonly powDifficulty: number;
 
   constructor(values: AppConfigValues) {
     this.port = values.port;
     this.databaseUrl = values.databaseUrl;
     this.logLevel = values.logLevel;
     this.allowedOrigins = values.allowedOrigins;
+    this.preloginSaltKey = values.preloginSaltKey;
+    this.powDifficulty = values.powDifficulty;
   }
 }
 
@@ -48,5 +55,7 @@ export function loadConfig(
     databaseUrl: result.data.DATABASE_URL,
     logLevel: result.data.LOG_LEVEL,
     allowedOrigins: result.data.ALLOWED_ORIGINS,
+    preloginSaltKey: result.data.PRELOGIN_SALT_KEY,
+    powDifficulty: result.data.POW_DIFFICULTY,
   });
 }
