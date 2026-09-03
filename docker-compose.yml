@@ -26,6 +26,9 @@ services:
       PORT: 3000
       ALLOWED_ORIGINS: http://localhost:${HTTP_PORT:-8080},http://127.0.0.1:${HTTP_PORT:-8080}
       PRELOGIN_SALT_KEY: ${PRELOGIN_SALT_KEY:?set PRELOGIN_SALT_KEY in .env}
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-shadowbox.test}
+      IP_HASH_KEY: ${IP_HASH_KEY:?set IP_HASH_KEY in .env}
+      IP_HASH_KEY_VERSION: ${IP_HASH_KEY_VERSION:-1}
     volumes:
       - .:/app
       - /app/node_modules

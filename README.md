@@ -201,7 +201,7 @@ ShadowBox/
 ```
 
 ```bash
-cp .env.example .env    # задай свой POSTGRES_PASSWORD и PRELOGIN_SALT_KEY
+cp .env.example .env    # задай свой POSTGRES_PASSWORD, PRELOGIN_SALT_KEY и IP_HASH_KEY
 docker compose up --build
 ```
 

@@ -33,6 +33,12 @@ const secretKeySchema = z
   .transform((value) => Buffer.from(value, 'base64url'))
   .refine((key) => key.length >= MIN_SECRET_KEY_BYTES);
 
+/** Lower-case DNS name, e.g. shadowbox.test (D-023). */
+const domainSchema = z
+  .string()
+  .max(253)
+  .regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/);
+
 export const envSchema = z.object({
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   PORT: z.coerce.number().int().min(1).max(65_535).default(DEFAULT_PORT),
@@ -40,6 +46,9 @@ export const envSchema = z.object({
   ALLOWED_ORIGINS: originListSchema,
   PRELOGIN_SALT_KEY: secretKeySchema,
   POW_DIFFICULTY: z.coerce.number().int().min(1).max(32).default(20),
+  MAIL_DOMAIN: domainSchema,
+  IP_HASH_KEY: secretKeySchema,
+  IP_HASH_KEY_VERSION: z.coerce.number().int().min(1).max(32_767).default(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

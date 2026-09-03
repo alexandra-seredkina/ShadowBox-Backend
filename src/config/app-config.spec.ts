@@ -5,6 +5,8 @@ const validEnv = {
   PORT: '4000',
   ALLOWED_ORIGINS: 'http://localhost:8080, http://127.0.0.1:8080/',
   PRELOGIN_SALT_KEY: Buffer.alloc(32, 7).toString('base64url'),
+  MAIL_DOMAIN: 'shadowbox.test',
+  IP_HASH_KEY: Buffer.alloc(32, 8).toString('base64url'),
 };
 
 describe('loadConfig', () => {
@@ -22,6 +24,7 @@ describe('loadConfig', () => {
     expect(config.port).toBe(3000);
     expect(config.logLevel).toBe('info');
     expect(config.powDifficulty).toBe(20);
+    expect(config.ipHashKeyVersion).toBe(1);
   });
 
   it('normalizes allowed origins', () => {
@@ -68,6 +71,25 @@ describe('loadConfig', () => {
         message: expect.not.stringContaining(weakKey),
       }),
     );
+  });
+
+  it.each([
+    'shadowbox',
+    'Shadowbox.test',
+    '-bad.test',
+    'a..test',
+    'mail.shadowbox.test.',
+  ])('rejects mail domain %j', (domain) => {
+    expect(() => loadConfig({ ...validEnv, MAIL_DOMAIN: domain })).toThrow(
+      ConfigValidationError,
+    );
+  });
+
+  it('accepts a nested mail domain', () => {
+    expect(
+      loadConfig({ ...validEnv, MAIL_DOMAIN: 'mx.shadow-box.example' })
+        .mailDomain,
+    ).toBe('mx.shadow-box.example');
   });
 
   it('rejects an unknown log level', () => {

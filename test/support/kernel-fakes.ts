@@ -1,4 +1,5 @@
 import { Clock } from '../../src/shared/kernel/clock.js';
+import { IpHash, IpHasher } from '../../src/shared/kernel/ip-hasher.js';
 import { SecureRandom } from '../../src/shared/kernel/secure-random.js';
 
 export class FixedClock implements Clock {
@@ -20,5 +21,12 @@ export class SequentialRandom implements SecureRandom {
   bytes(length: number): Uint8Array {
     this.calls += 1;
     return new Uint8Array(length).fill(this.calls);
+  }
+}
+
+/** Keeps the address readable in assertions instead of hashing it. */
+export class PlainIpHasher implements IpHasher {
+  hash(ip: string): IpHash {
+    return { hash: Buffer.from(ip, 'utf8'), keyVersion: 1 };
   }
 }

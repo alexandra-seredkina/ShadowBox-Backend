@@ -6,3 +6,8 @@ export function toBase64Url(bytes: Uint8Array): string {
 export function toApiInstant(instant: Date): string {
   return instant.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
+
+/** Coarse timestamps are given as a UTC date only (D-008). */
+export function toApiDate(instant: Date): string {
+  return instant.toISOString().slice(0, 10);
+}

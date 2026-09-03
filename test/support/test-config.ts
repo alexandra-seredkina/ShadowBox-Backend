@@ -12,6 +12,9 @@ export function createTestConfig(
     allowedOrigins: [TEST_ALLOWED_ORIGIN],
     preloginSaltKey: new Uint8Array(32).fill(42),
     powDifficulty: 8,
+    mailDomain: 'shadowbox.test',
+    ipHashKey: new Uint8Array(32).fill(43),
+    ipHashKeyVersion: 1,
     ...overrides,
   });
 }

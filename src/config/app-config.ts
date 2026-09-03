@@ -15,6 +15,10 @@ export interface AppConfigValues {
   /** HMAC key for decoy KDF salts. Never rotated: see DecoySaltSource. */
   readonly preloginSaltKey: Uint8Array;
   readonly powDifficulty: number;
+  readonly mailDomain: string;
+  /** HMAC key for client IPs; the version is stored next to every hash. */
+  readonly ipHashKey: Uint8Array;
+  readonly ipHashKeyVersion: number;
 }
 
 export class AppConfig implements AppConfigValues {
@@ -24,6 +28,9 @@ export class AppConfig implements AppConfigValues {
   readonly allowedOrigins: readonly string[];
   readonly preloginSaltKey: Uint8Array;
   readonly powDifficulty: number;
+  readonly mailDomain: string;
+  readonly ipHashKey: Uint8Array;
+  readonly ipHashKeyVersion: number;
 
   constructor(values: AppConfigValues) {
     this.port = values.port;
@@ -32,6 +39,9 @@ export class AppConfig implements AppConfigValues {
     this.allowedOrigins = values.allowedOrigins;
     this.preloginSaltKey = values.preloginSaltKey;
     this.powDifficulty = values.powDifficulty;
+    this.mailDomain = values.mailDomain;
+    this.ipHashKey = values.ipHashKey;
+    this.ipHashKeyVersion = values.ipHashKeyVersion;
   }
 }
 
@@ -57,5 +67,8 @@ export function loadConfig(
     allowedOrigins: result.data.ALLOWED_ORIGINS,
     preloginSaltKey: result.data.PRELOGIN_SALT_KEY,
     powDifficulty: result.data.POW_DIFFICULTY,
+    mailDomain: result.data.MAIL_DOMAIN,
+    ipHashKey: result.data.IP_HASH_KEY,
+    ipHashKeyVersion: result.data.IP_HASH_KEY_VERSION,
   });
 }
