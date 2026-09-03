@@ -1,12 +1,16 @@
 <p align="center">
-  <img src="docs/images/readme-banner.webp" alt="ShadowBox — анонимная зашифрованная почта" width="100%">
+  <b>English</b> · <a href="README.ru.md">Русский</a> · <a href="README.de.md">Deutsch</a>
+</p>
+
+<p align="center">
+  <img src="docs/images/readme-banner.webp" alt="ShadowBox — anonymous encrypted mail" width="100%">
 </p>
 
 <h1 align="center">ShadowBox</h1>
 
 <p align="center">
-  <b>Анонимная почта, которая не может прочитать твои письма.</b><br>
-  Без телефона и имени. Отдельный адрес для каждого сайта. Шифрование в момент получения.
+  <b>Anonymous mail that cannot read your messages.</b><br>
+  No phone number, no name. A separate address for every site. Encrypted the moment it arrives.
 </p>
 
 <p align="center">
@@ -15,184 +19,186 @@
   <img alt="NestJS 12" src="https://img.shields.io/badge/NestJS-12-14171B?style=flat-square&logo=nestjs">
   <img alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-14171B?style=flat-square&logo=postgresql">
   <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-14171B?style=flat-square&logo=nextdotjs">
-  <img alt="Status: MVP in progress" src="https://img.shields.io/badge/status-MVP%20%D0%B2%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B5-E2A03A?style=flat-square">
+  <img alt="Status: MVP in progress" src="https://img.shields.io/badge/status-MVP%20in%20progress-E2A03A?style=flat-square">
 </p>
 
 <p align="center">
-  <a href="#скриншоты">Скриншоты</a> ·
-  <a href="#как-это-работает">Как это работает</a> ·
-  <a href="#модель-угроз">Модель угроз</a> ·
-  <a href="#технологии">Технологии</a> ·
-  <a href="#запуск">Запуск</a> ·
-  <a href="https://github.com/alexandra-seredkina/ShadowBox-Frontend">Фронтенд</a>
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#threat-model">Threat model</a> ·
+  <a href="#tech-stack">Tech stack</a> ·
+  <a href="#running-locally">Running locally</a> ·
+  <a href="https://github.com/alexandra-seredkina/ShadowBox-Frontend">Frontend</a>
 </p>
 
 ---
 
-## О проекте
+## About
 
-**ShadowBox** — почтовый сервис, который не знает, кто ты, и не может прочитать твои письма.
+**ShadowBox** is a mail service that does not know who you are and cannot read your mail.
 
-Регистрация — только логин и пароль. Для каждого сайта заводишь отдельный адрес: магазину один, банку другой, форуму третий. Входящее письмо шифруется твоим ключом в момент приёма, на сервере остаётся только шифротекст, а расшифровать его можно только в браузере после ввода пароля. Подозрительные письма помечаются ещё до того, как ты их откроешь.
+Signing up takes a login and a password, nothing else. You create a separate address for every site: one for the shop, another for the bank, a third for the forum. An incoming message is encrypted with your key the moment it is received, the server keeps only ciphertext, and it can be decrypted only in your browser after you enter your password. Suspicious messages are flagged before you open them.
 
-Проект состоит из двух репозиториев:
+The project lives in two repositories:
 
-| Репозиторий | Что внутри |
+| Repository | What is inside |
 | --- | --- |
-| **ShadowBox-Backend** (ты здесь) | API на NestJS, PostgreSQL, приём почты, nginx и docker-окружение |
-| [ShadowBox-Frontend](https://github.com/alexandra-seredkina/ShadowBox-Frontend) | Веб-клиент на Next.js: сайт, регистрация, ящик, криптография в браузере |
+| **ShadowBox-Backend** (you are here) | NestJS API, PostgreSQL, mail intake, nginx and the Docker setup |
+| [ShadowBox-Frontend](https://github.com/alexandra-seredkina/ShadowBox-Frontend) | Next.js web client: website, sign-up, inbox, in-browser cryptography |
 
-## Скриншоты
+## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/landing-hero.webp" alt="Главная страница ShadowBox: заголовок «Письмо уходит в тень» и героиня Kage в серверном зале" width="100%">
+  <img src="docs/screenshots/landing-hero.webp" alt="ShadowBox landing page: the headline “Your mail fades into the shadow” and the heroine Kage in a server hall" width="100%">
 </p>
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/landing-how.webp" alt="Три шага: регистрация без телефона, адрес для каждого сайта, прочитать можешь только ты"></td>
-    <td width="50%"><img src="docs/screenshots/landing-security.webp" alt="Блок безопасности с честным списком того, что сервис не обещает"></td>
+    <td width="50%"><img src="docs/screenshots/landing-how.webp" alt="Three steps: sign up without a phone, an address for every site, only you can read it"></td>
+    <td width="50%"><img src="docs/screenshots/landing-security.webp" alt="Security block with an honest list of what the service does not promise"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/landing-aliases.webp" alt="Раздел про адреса: постоянные, временные, подписи и папки"></td>
-    <td width="50%"><img src="docs/screenshots/landing-phishing.webp" alt="Раздел антифишинга с метками писем и списком проверок"></td>
+    <td width="50%"><img src="docs/screenshots/landing-aliases.webp" alt="Addresses section: permanent and temporary addresses, labels and folders"></td>
+    <td width="50%"><img src="docs/screenshots/landing-phishing.webp" alt="Anti-phishing section with message labels and the list of checks"></td>
   </tr>
 </table>
 
 <p align="center">
-  <img src="docs/screenshots/mobile-languages.webp" alt="Мобильная версия сайта на русском, английском и немецком" width="85%"><br>
-  <sub>Сайт на русском, английском и немецком, мобильная вёрстка</sub>
+  <img src="docs/screenshots/mobile-languages.webp" alt="Mobile layout in Russian, English and German" width="85%"><br>
+  <sub>The site in English, Russian and German, mobile layout</sub>
 </p>
 
-## Зачем это нужно
+## Why
 
-Сколько аккаунтов привязано к твоей почте? При регистрации почти везде просят почту, через неё же восстанавливают пароль. Ключ к почте — ключ ко всей цифровой жизни: получив один ящик, злоумышленник получает доступ почти ко всем сервисам, документам и перепискам.
+How many accounts are tied to your email? Almost every service asks for it at sign-up and uses it to reset your password. The key to your mailbox is the key to your whole digital life: whoever gets one inbox gets into nearly every service, document and conversation.
 
-И кому мы эту почту доверяем? [Яндекс признал](https://yandex.ru/company/news/2021-02-12), что сотрудник получил несанкционированный доступ к 4887 почтовым ящикам. [Google подтвердил](https://www.bbc.com/news/technology-44699263), что письма пользователей могут читать сторонние разработчики приложений, и это не противоречит его политике.
+And who do we trust with that mail? [Yandex admitted](https://yandex.ru/company/news/2021-02-12) that an employee gained unauthorised access to 4,887 mailboxes. [Google confirmed](https://www.bbc.com/news/technology-44699263) that third-party app developers can read users' messages and that this does not break its policy.
 
-## Цели
+## Goals
 
-Приоритеты проекта в таком порядке: **безопасность → анонимность → удобство**.
+Priorities, in this order: **security → anonymity → convenience**.
 
-- 🔐 **Zero-access.** Сервер хранит только шифротекст. Ни администратор, ни украденный бэкап, ни утёкший дамп базы не дают прочитать письма.
-- 🕶 **Минимум данных.** Не спрашиваем телефон, имя и запасную почту. Не храним IP в открытом виде, не пишем лишнего в логи.
-- ✉️ **Адрес на каждый случай.** Случайные адреса не связаны ни с логином, ни друг с другом. Утёкший адрес удаляется в один клик и больше никому не выдаётся.
-- 🛡 **Защита от фишинга.** SPF, DKIM, DMARC и эвристики против подмены отправителя, ссылок-обманок и опасных вложений.
-- 🤝 **Честность.** Отдельно пишем, от чего сервис *не* защищает. Никаких «100% анонимности» и «военного шифрования».
-- 🔎 **Проверяемость.** Открытый код под AGPL-3.0, SAST и аудит зависимостей на каждый pull request.
+- 🔐 **Zero access.** The server stores only ciphertext. Neither an administrator, nor a stolen backup, nor a leaked database dump can read your mail.
+- 🕶 **Minimal data.** No phone number, name or backup email. IP addresses are never stored in plain form, logs carry nothing they do not need.
+- ✉️ **An address for every occasion.** Random addresses are tied neither to your login nor to each other. A leaked address is deleted in one click and never handed to anyone else.
+- 🛡 **Phishing protection.** SPF, DKIM, DMARC and heuristics against spoofed senders, deceptive links and dangerous attachments.
+- 🤝 **Honesty.** We spell out what the service does *not* protect against. No “100% anonymity”, no “military-grade encryption”.
+- 🔎 **Verifiability.** Open source under AGPL-3.0, SAST and dependency audit on every pull request.
 
-## Как это работает
+## How it works
 
 <p align="center">
-  <img src="docs/images/mail-flow.webp" alt="Путь письма: отправитель → сервер ShadowBox шифрует открытым ключом → хранилище с шифротекстом → расшифровка на устройстве пользователя" width="85%">
+  <img src="docs/images/mail-flow.webp" alt="A message's path: sender → the ShadowBox server encrypts it with the public key → storage holds only ciphertext → decryption on the user's device" width="85%">
 </p>
 
-1. **Регистрация.** Браузер решает небольшую задачу proof-of-work вместо капчи, генерирует пару ключей X25519 и показывает recovery-фразу. Пароль на сервер не уходит: из него в браузере выводятся `authKey` (для входа) и `encKey` (открывает приватный ключ).
-2. **Адреса.** Создаёшь постоянные или временные (1 ч, 24 ч, 7 или 30 дней) адреса. Подписи адресов и названия папок шифруются в браузере.
-3. **Приём письма.** Внешний SMTP → Postfix → LMTP → модуль `delivery`. В памяти сервер проверяет SPF/DKIM/DMARC, ставит метки угроз, шифрует превью и всё письмо открытым ключом получателя и сохраняет только шифротекст.
-4. **Чтение.** Браузер получает шифротекст, расшифровывает его ключом из памяти и показывает HTML-письма в изолированном `iframe` без скриптов и внешних картинок.
+1. **Sign-up.** Instead of a captcha the browser solves a small proof-of-work puzzle, generates an X25519 key pair and shows a recovery phrase. The password never reaches the server: the browser derives `authKey` (for signing in) and `encKey` (unlocks the private key) from it.
+2. **Addresses.** You create permanent or temporary addresses (1 h, 24 h, 7 or 30 days). Address labels and folder names are encrypted in the browser.
+3. **Receiving.** External SMTP → Postfix → LMTP → the `delivery` module. In memory the server checks SPF/DKIM/DMARC, sets threat labels, encrypts the preview and the whole message with the recipient's public key and stores only the ciphertext.
+4. **Reading.** The browser fetches the ciphertext, decrypts it with the key held in memory and renders HTML mail in an isolated `iframe` without scripts or remote images.
 
 > [!NOTE]
-> Письмо из обычной почты приходит по SMTP открытым текстом — так устроен протокол. Сервер видит его в момент приёма, до шифрования, и видит метаданные: время, адрес получателя и размер. Подпись «Admins see nothing» на схеме относится к содержимому писем в хранилище.
+> Mail from regular providers arrives over SMTP in plain text — that is how the protocol works. The server sees a message at the moment it is received, before encryption, and it sees metadata: time, recipient address and size. “Admins see nothing” on the diagram refers to message content in storage.
 
-## Возможности MVP
+## MVP features
 
-| | Возможность | Статус |
+| | Feature | Status |
 | --- | --- | :---: |
-| 👤 | Регистрация по логину и паролю, proof-of-work вместо капчи | 🚧 |
-| 🔑 | Ключи генерируются в браузере, приватный ключ живёт только в памяти вкладки | 📋 |
-| ✉️ | Постоянные и временные адреса, подписи, папка для входящих | 📋 |
-| 📥 | Приём почты с шифрованием в момент получения | 📋 |
-| 🛡 | Метки угроз и результат SPF/DKIM/DMARC человеческим языком | 📋 |
-| 🗂 | Папки, массовые действия, поиск по расшифрованным письмам на клиенте | 📋 |
-| 💻 | Список сессий, завершение любой, привязка сессии к IP по желанию | 📋 |
-| 🌍 | Сайт на русском, английском и немецком | ✅ |
+| 👤 | Sign-up with a login and password, proof-of-work instead of a captcha | 🚧 |
+| 🔑 | Keys are generated in the browser, the private key lives only in the tab's memory | 📋 |
+| ✉️ | Permanent and temporary addresses, labels, a folder for incoming mail | 📋 |
+| 📥 | Mail intake with encryption at the moment of receipt | 📋 |
+| 🛡 | Threat labels and SPF/DKIM/DMARC results in plain language | 📋 |
+| 🗂 | Folders, bulk actions, client-side search over decrypted mail | 📋 |
+| 💻 | Session list, ending any session, optional binding of a session to its IP | 📋 |
+| 🌍 | Website in English, Russian and German | ✅ |
 
-✅ готово · 🚧 в работе · 📋 запланировано
+✅ done · 🚧 in progress · 📋 planned
 
-**Вне MVP:** отправка писем (сначала E2E между пользователями ShadowBox, затем во внешний интернет), 2FA (TOTP и passkeys), восстановление по recovery-фразе, PGP, прокси для картинок, переход на OPAQUE.
+**Beyond the MVP:** sending mail (first end-to-end between ShadowBox users, then to the outside internet), 2FA (TOTP and passkeys), recovery with the recovery phrase, PGP, an image proxy, moving to OPAQUE.
 
-### Что уже сделано на бэкенде
+### Already done on the backend
 
-- Строгий TypeScript и type-aware линтер, валидация окружения схемой `zod` — приложение не стартует с битым конфигом.
-- Структурные логи `pino` с redact-списком, `requestId` в каждом ответе, единый формат ошибок API.
-- Схема БД под MVP: UUIDv7, `timestamptz`, ограничения целостности на уровне PostgreSQL (адрес нельзя выдать повторно, письмо нельзя положить в чужую папку).
-- Версионированный API `/api/v1`, проверка `Origin` на изменяющих запросах, лимит размера тела.
-- Первые эндпоинты входа: `POST /auth/pow` (задача proof-of-work) и `POST /auth/prelogin` (параметры KDF; для несуществующего логина — правдоподобные фиктивные, чтобы нельзя было проверить, занят ли он).
-- nginx без фиктивных заголовков и без версий в `Server`.
+- Strict TypeScript and a type-aware linter, environment validated with a `zod` schema — the app refuses to start with a broken config.
+- Structured `pino` logs with a redact list, a `requestId` on every response, one error format for the whole API.
+- MVP database schema: UUIDv7, `timestamptz`, integrity enforced by PostgreSQL (an address can never be issued twice, a message can never land in someone else's folder).
+- Versioned API under `/api/v1`, `Origin` checks on mutating requests, request body size limit.
+- First sign-in endpoints: `POST /auth/pow` (proof-of-work challenge) and `POST /auth/prelogin` (KDF parameters; an unknown login gets plausible decoy values, so nobody can check whether a login is taken).
+- Sign-up `POST /auth/register`: the server keeps only an Argon2id hash of `authKey`; the account, system folders, first address and session are created in one transaction; retrying with an `Idempotency-Key` is safe. The session is an `HttpOnly` `__Host-` cookie, the database holds only the token's SHA-256 and an HMAC of the IP.
+- Cryptographic test vectors shared with the web client: the same inputs give the same bytes in the browser and on the server.
+- nginx without fake headers and without versions in `Server`.
 
-## Модель угроз
+## Threat model
 
-Противником считаются в том числе оператор сервера, утёкшая база и украденный бэкап. Каждое решение проверяется вопросом: *что узнает атакующий, получивший полный дамп базы, логов и диска?*
+The adversary includes the server operator, a leaked database and a stolen backup. Every decision is checked against one question: *what does an attacker learn from a full dump of the database, the logs and the disk?*
 
-| Угроза | Что защищает | |
+| Threat | What protects you | |
 | --- | --- | :---: |
-| Утечка базы данных или бэкапа | Письма, темы, подписи адресов и названия папок — только шифротекст | ✅ |
-| Любопытный администратор | Ключи расшифровки есть только в браузере пользователя | ✅ |
-| Подбор паролей и массовая регистрация | Argon2id, proof-of-work, rate limiting, одинаковый ответ для «нет логина» и «неверный пароль» | ✅ |
-| Кража сессии через XSS | `HttpOnly`-cookie `__Host-`, `SameSite=Strict`, CSP с nonce, повторный ввод пароля для опасных действий | ✅ |
-| Деанонимизация по регистрации | Телефон, имя и почта не запрашиваются; IP хранится только как HMAC с ротируемым ключом не дольше 30 дней | ✅ |
-| Трекинг-пиксели и фишинг | Внешние картинки скрыты, HTML в изолированном `iframe`, метки угроз | ✅ |
-| Метаданные: кто, кому и когда | Время, адрес получателя и размер письма серверу видны | ⚠️ |
-| Внешний отправитель и его провайдер | Видят письмо до того, как оно дойдёт до нас | ❌ |
-| Подмена JavaScript веб-клиента сервером | Код открыт, но веб-клиент получает JS с сервера | ⚠️ |
-| Взломанное устройство пользователя | Вне зоны ответственности сервиса | ❌ |
+| Database or backup leak | Messages, subjects, address labels and folder names are ciphertext only | ✅ |
+| Curious administrator | Decryption keys exist only in the user's browser | ✅ |
+| Password guessing and mass sign-up | Argon2id, proof-of-work, rate limiting, the same answer for “no such login” and “wrong password” | ✅ |
+| Session theft via XSS | `HttpOnly` `__Host-` cookie, `SameSite=Strict`, CSP with nonce, password re-entry for dangerous actions | ✅ |
+| De-anonymisation through sign-up | No phone, name or email asked; IPs stored only as an HMAC with a rotating key for at most 30 days | ✅ |
+| Tracking pixels and phishing | Remote images hidden, HTML in an isolated `iframe`, threat labels | ✅ |
+| Metadata: who, to whom, when | The server sees time, recipient address and message size | ⚠️ |
+| The external sender and their provider | See the message before it reaches us | ❌ |
+| The server swapping the web client's JavaScript | The code is open, but the web client still loads JS from the server | ⚠️ |
+| A compromised user device | Outside what the service can protect | ❌ |
 
-Модель описывает целевую архитектуру MVP; что уже реализовано — в таблице возможностей выше.
+The model describes the target MVP architecture; what is implemented already is in the feature table above.
 
-## Архитектура
+## Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Browser["Браузер"]
-        UI["Next.js клиент<br/>libsodium, ключи в памяти"]
+    subgraph Browser["Browser"]
+        UI["Next.js client<br/>libsodium, keys in memory"]
     end
-    subgraph Server["Сервер"]
+    subgraph Server["Server"]
         NGINX["nginx"]
         WEB["Next.js"]
         API["NestJS API<br/>/api/v1"]
-        DB[("PostgreSQL<br/>только шифротекст")]
+        DB[("PostgreSQL<br/>ciphertext only")]
         MTA["Postfix"]
     end
-    Internet(("Интернет")) -- SMTP --> MTA -- LMTP --> API
+    Internet(("Internet")) -- SMTP --> MTA -- LMTP --> API
     UI -- HTTPS --> NGINX
     NGINX --> WEB
     NGINX -- /api --> API
     API --> DB
 ```
 
-Бэкенд — модульный монолит: модули по бизнес-возможностям (`identity`, `alias`, `folder`, `message`, `threat`, `delivery`), внутри каждого слои `domain → application → infrastructure / presentation`. Границы слоёв проверяет линтер.
+The backend is a modular monolith: modules by business capability (`identity`, `alias`, `folder`, `message`, `threat`, `delivery`), each split into `domain → application → infrastructure / presentation` layers. The linter enforces the layer boundaries.
 
 ```
 src/
-├── config/            схема окружения и типизированный конфиг
-├── shared/            ошибки, kernel-типы, HTTP-обвязка
-├── infrastructure/    Prisma, криптография, логирование
+├── config/            environment schema and typed config
+├── shared/            errors, kernel types, HTTP plumbing
+├── infrastructure/    Prisma, cryptography, logging
 ├── modules/
-│   ├── identity/      регистрация, вход, сессии
-│   ├── alias/         постоянные и временные адреса
-│   ├── folder/        папки
-│   ├── message/       письма в зашифрованном виде
-│   ├── threat/        метки угроз
-│   └── delivery/      приём почты по LMTP
+│   ├── identity/      sign-up, sign-in, sessions
+│   ├── alias/         permanent and temporary addresses
+│   ├── folder/        folders
+│   ├── message/       messages, stored encrypted
+│   ├── threat/        threat labels
+│   └── delivery/      mail intake over LMTP
 └── health/            /api/health
 ```
 
-## Технологии
+## Tech stack
 
-| Слой | Стек |
+| Layer | Stack |
 | --- | --- |
-| **API** | NestJS 12 (ESM), TypeScript strict, zod, pino, helmet |
-| **Данные** | PostgreSQL 18, Prisma 7, UUIDv7, `timestamptz` |
-| **Криптография** | libsodium: Argon2id, X25519, XChaCha20-Poly1305 (`crypto_box_seal`) |
-| **Почта** | Postfix → LMTP (`smtp-server`), `mailauth` для SPF/DKIM/DMARC, `postal-mime` |
-| **Веб-клиент** | Next.js 16, React 19, Tailwind CSS 4, `libsodium-wrappers-sumo` — [подробнее](https://github.com/alexandra-seredkina/ShadowBox-Frontend) |
-| **Инфраструктура** | Docker Compose, nginx, порты только на `127.0.0.1` |
-| **Качество** | Vitest (unit и e2e), oxlint с type-aware правилами, Semgrep, `npm audit`, Dependabot |
+| **API** | NestJS 12 (ESM), strict TypeScript, zod, pino, helmet |
+| **Data** | PostgreSQL 18, Prisma 7, UUIDv7, `timestamptz` |
+| **Cryptography** | libsodium: Argon2id, X25519, XChaCha20-Poly1305 (`crypto_box_seal`) |
+| **Mail** | Postfix → LMTP (`smtp-server`), `mailauth` for SPF/DKIM/DMARC, `postal-mime` |
+| **Web client** | Next.js 16, React 19, Tailwind CSS 4, `libsodium-wrappers-sumo` — [details](https://github.com/alexandra-seredkina/ShadowBox-Frontend) |
+| **Infrastructure** | Docker Compose, nginx, ports bound to `127.0.0.1` only |
+| **Quality** | Vitest (unit, integration, e2e), oxlint with type-aware rules, Semgrep, `npm audit`, Dependabot |
 
-## Запуск
+## Running locally
 
-Нужны Docker с Compose и оба репозитория рядом:
+You need Docker with Compose and both repositories side by side:
 
 ```
 ShadowBox/
@@ -201,48 +207,48 @@ ShadowBox/
 ```
 
 ```bash
-cp .env.example .env    # задай свой POSTGRES_PASSWORD, PRELOGIN_SALT_KEY и IP_HASH_KEY
+cp .env.example .env    # set your own POSTGRES_PASSWORD, PRELOGIN_SALT_KEY and IP_HASH_KEY
 docker compose up --build
 ```
 
-| Адрес | Что |
+| Address | What |
 | --- | --- |
-| http://localhost:8080 | сайт и веб-клиент через nginx |
-| http://localhost:8080/api/health | состояние API и базы |
-| `127.0.0.1:5433` | PostgreSQL для Prisma Studio и миграций с хоста |
+| http://localhost:8080 | website and web client through nginx |
+| http://localhost:8080/api/health | API and database status |
+| `127.0.0.1:5433` | PostgreSQL for Prisma Studio and migrations from the host |
 
-Открывай именно `localhost` или `127.0.0.1`: браузер считает их безопасным контекстом, и `Secure`-cookie работают без HTTPS. Почтовый домен в разработке — `shadowbox.test`, он задаётся переменной окружения и нигде не зашит в коде.
+Open exactly `localhost` or `127.0.0.1`: browsers treat them as a secure context, so `Secure` cookies work without HTTPS. The development mail domain is `shadowbox.test`; it comes from an environment variable and is not hard-coded anywhere.
 
-Код обоих репозиториев монтируется в контейнеры и перезагружается при изменениях. После смены зависимостей пересобери контейнеры с новыми томами:
+The code of both repositories is mounted into the containers and reloads on change. After changing dependencies, rebuild the containers with fresh volumes:
 
 ```bash
 docker compose up --build -V
 ```
 
-Новая миграция после изменения `prisma/schema.prisma`:
+A new migration after editing `prisma/schema.prisma`:
 
 ```bash
-npx prisma migrate dev --name <название>
+npx prisma migrate dev --name <name>
 ```
 
-### Проверки
+### Checks
 
 ```bash
 npm run typecheck
 npm run lint
 npm test
-npm run test:integration
+npm run test:integration   # needs DATABASE_URL of a disposable database
 npm run test:e2e
 ```
 
-То же самое запускает CI на каждый pull request, плюс Semgrep и `npm audit`.
+CI runs the same on every pull request, plus Semgrep and `npm audit`.
 
-## Участие и безопасность
+## Contributing and security
 
-Идеи, критика и pull request'ы приветствуются. Безопасность — приоритет номер один, анонимность — номер два.
+Ideas, criticism and pull requests are welcome. Security comes first, anonymity second.
 
-Нашёл уязвимость? Не открывай публичный issue — создай [приватное сообщение о уязвимости](https://github.com/alexandra-seredkina/ShadowBox-Backend/security/advisories/new) на GitHub.
+Found a vulnerability? Please do not open a public issue — file a [private vulnerability report](https://github.com/alexandra-seredkina/ShadowBox-Backend/security/advisories/new) on GitHub.
 
-## Лицензия
+## License
 
-[AGPL-3.0](LICENSE). Если ты запускаешь изменённую версию ShadowBox как сервис, исходный код изменений должен быть доступен его пользователям.
+[AGPL-3.0](LICENSE). If you run a modified version of ShadowBox as a service, the source code of your changes must be available to its users.

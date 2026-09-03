@@ -1,4 +1,4 @@
-/** Server-side Argon2id over the client-derived authKey (D-003). */
+/** Server-side Argon2id over the authKey the client derives from the password. */
 export abstract class AuthKeyHasher {
   abstract hash(authKey: Uint8Array): Promise<string>;
 

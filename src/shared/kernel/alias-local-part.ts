@@ -7,7 +7,7 @@ const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const UNBIASED_BYTE_LIMIT = Math.floor(256 / ALPHABET.length) * ALPHABET.length;
 
 /**
- * Random `[a-z0-9]{10}` local part (API.md §6). Shared by registration,
+ * Random `[a-z0-9]{10}` local part. Shared by registration,
  * which issues the first address, and the alias module.
  */
 export function generateAliasLocalPart(random: SecureRandom): string {

@@ -33,7 +33,7 @@ const secretKeySchema = z
   .transform((value) => Buffer.from(value, 'base64url'))
   .refine((key) => key.length >= MIN_SECRET_KEY_BYTES);
 
-/** Lower-case DNS name, e.g. shadowbox.test (D-023). */
+/** Lower-case DNS name, e.g. shadowbox.test. */
 const domainSchema = z
   .string()
   .max(253)

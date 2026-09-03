@@ -14,8 +14,8 @@ export type DomainErrorKind = (typeof DOMAIN_ERROR_KINDS)[number];
 
 /**
  * Base for every expected failure. `code` is the machine-readable value from
- * API.md; `kind` lets the presentation layer pick an HTTP status without the
- * domain knowing about HTTP.
+ * the API contract; `kind` lets the presentation layer pick an HTTP status
+ * without the domain knowing about HTTP.
  */
 export abstract class DomainError extends Error {
   abstract readonly code: string;

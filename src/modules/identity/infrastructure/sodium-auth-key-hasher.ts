@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import sodium from 'sodium-native';
 import { AuthKeyHasher } from '../domain/auth-key-hasher.js';
 
-/** security_quality.md §3.2: at least 64 MiB and 3 passes. */
+/** Never below 64 MiB and 3 passes. */
 export const AUTH_KEY_HASH_OPS_LIMIT = 3;
 export const AUTH_KEY_HASH_MEM_LIMIT_BYTES = 64 * 1024 * 1024;
 

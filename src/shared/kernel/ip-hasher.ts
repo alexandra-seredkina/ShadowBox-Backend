@@ -1,4 +1,4 @@
-/** HMAC of a client IP; the raw address is never stored (security_quality.md §2). */
+/** HMAC of a client IP; the raw address is never stored. */
 export interface IpHash {
   readonly hash: Uint8Array;
   readonly keyVersion: number;

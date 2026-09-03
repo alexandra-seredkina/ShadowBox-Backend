@@ -5,7 +5,7 @@ export const IDEMPOTENCY_KEY_HEADER = 'idempotency-key';
 
 const keySchema = z.uuid();
 
-/** The header is optional (API.md §1.6); a present but malformed one is a validation error. */
+/** The header is optional; a present but malformed one is a validation error. */
 export function parseIdempotencyKey(value: string | undefined): string | null {
   if (value === undefined) {
     return null;

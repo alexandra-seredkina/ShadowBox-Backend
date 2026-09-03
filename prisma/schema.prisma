@@ -207,7 +207,7 @@ model Message {
   @@map("messages")
 }
 
-/// D-009: only an HMAC of the sender under a versioned key, no timestamps.
+/// Only an HMAC of the sender under a versioned key, no timestamps.
 model KnownSender {
   accountId      String @map("account_id") @db.Uuid
   senderHash     Bytes  @map("sender_hash")
