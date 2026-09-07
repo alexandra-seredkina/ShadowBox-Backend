@@ -3,7 +3,7 @@ import {
   toApiInstant,
   toBase64Url,
 } from '../../../shared/http/api-format.js';
-import type { AccountSummary } from '../domain/account.js';
+import type { AccountKeys, AccountSummary } from '../domain/account.js';
 import {
   MAX_ACTIVE_ALIASES_PER_ACCOUNT,
   MAX_MESSAGE_BYTES,
@@ -12,6 +12,8 @@ import type { AliasSummary } from '../domain/alias-summary.js';
 import type { KdfParams } from '../domain/kdf-params.js';
 import type { PowChallenge } from '../domain/pow-challenge.js';
 import type { RegistrationResult } from '../domain/registration.js';
+import type { SessionState } from '../application/load-session-state.handler.js';
+import type { SignInOutcome } from '../application/sign-in.handler.js';
 
 export interface PowChallengeResponse {
   readonly challengeId: string;
@@ -52,6 +54,27 @@ export interface AliasResponse {
   readonly expiresAt: string | null;
   readonly createdAt: string;
   readonly lastReceivedAt: string | null;
+}
+
+export interface KeysResponse {
+  readonly publicKey: string;
+  readonly encryptedPrivateKey: {
+    readonly nonce: string;
+    readonly ciphertext: string;
+  };
+  readonly kdf: KdfParamsResponse;
+}
+
+export interface SignInResponse {
+  readonly account: AccountResponse;
+  readonly keys: KeysResponse;
+}
+
+export interface SessionStateResponse extends SignInResponse {
+  readonly session: {
+    readonly id: string;
+    readonly reauthUntil: string | null;
+  };
 }
 
 export interface RegisterResponse {
@@ -114,5 +137,37 @@ export function toRegisterResponse(
   return {
     account: toAccountResponse(result.account),
     firstAlias: toAliasResponse(result.firstAlias),
+  };
+}
+
+export function toKeysResponse(keys: AccountKeys): KeysResponse {
+  return {
+    publicKey: toBase64Url(keys.publicKey),
+    encryptedPrivateKey: {
+      nonce: toBase64Url(keys.encryptedPrivateKey.nonce),
+      ciphertext: toBase64Url(keys.encryptedPrivateKey.ciphertext),
+    },
+    kdf: toKdfParamsResponse(keys.kdf),
+  };
+}
+
+export function toSignInResponse(outcome: SignInOutcome): SignInResponse {
+  return {
+    account: toAccountResponse(outcome.account),
+    keys: toKeysResponse(outcome.keys),
+  };
+}
+
+export function toSessionStateResponse(
+  state: SessionState,
+): SessionStateResponse {
+  const { reauthUntil } = state.session;
+  return {
+    account: toAccountResponse(state.account),
+    keys: toKeysResponse(state.keys),
+    session: {
+      id: state.session.id,
+      reauthUntil: reauthUntil === null ? null : toApiInstant(reauthUntil),
+    },
   };
 }

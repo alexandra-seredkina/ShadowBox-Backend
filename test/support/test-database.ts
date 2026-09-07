@@ -12,6 +12,6 @@ export function createTestPrisma(): PrismaService {
 export async function resetDatabase(prisma: PrismaService): Promise<void> {
   await prisma.$executeRaw`
     TRUNCATE accounts, sessions, aliases, folders, messages, known_senders,
-      pow_challenges, idempotency_records
+      pow_challenges, idempotency_records, attempt_counters
     RESTART IDENTITY CASCADE`;
 }

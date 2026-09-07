@@ -28,6 +28,7 @@ import {
   RegisterAccountCommand,
   RegisterAccountHandler,
 } from './register-account.handler.js';
+import { PowVerifier } from './pow-verifier.js';
 import { SessionIssuer } from './session-issuer.js';
 
 const NOW = new Date('2020-01-15T12:00:00Z');
@@ -92,7 +93,7 @@ describe('RegisterAccountHandler', () => {
       store,
       store,
       sessions,
-      challenges,
+      new PowVerifier(challenges, clock),
       store,
       hasher,
       new SessionIssuer(random, new PlainIpHasher(), clock),

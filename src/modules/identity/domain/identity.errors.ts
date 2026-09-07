@@ -34,3 +34,40 @@ export class AliasAddressTakenError extends Error {
     this.name = 'AliasAddressTakenError';
   }
 }
+
+/** One answer for an unknown login and a wrong key alike. */
+export class InvalidCredentialsError extends DomainError {
+  readonly code = 'INVALID_CREDENTIALS';
+  readonly kind = 'unauthenticated';
+
+  constructor() {
+    super('Invalid login or key');
+  }
+}
+
+export class UnauthenticatedError extends DomainError {
+  readonly code = 'UNAUTHENTICATED';
+  readonly kind = 'unauthenticated';
+
+  constructor() {
+    super('Not authenticated');
+  }
+}
+
+export class PowRequiredError extends DomainError {
+  readonly code = 'POW_REQUIRED';
+  readonly kind = 'precondition_required';
+
+  constructor() {
+    super('Too many failed attempts: solve a proof-of-work challenge');
+  }
+}
+
+export class AccountLockedError extends DomainError {
+  readonly code = 'ACCOUNT_LOCKED';
+  readonly kind = 'locked';
+
+  constructor(override readonly retryAfterSeconds: number) {
+    super('Sign-in is temporarily locked');
+  }
+}

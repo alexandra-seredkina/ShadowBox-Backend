@@ -6,4 +6,7 @@ export interface IpHash {
 
 export abstract class IpHasher {
   abstract hash(ip: string): IpHash;
+
+  /** Constant-time check that `ip` produced `stored`; false if its key is gone. */
+  abstract matches(ip: string, stored: IpHash): boolean;
 }

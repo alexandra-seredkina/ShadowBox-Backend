@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   HttpStatus,
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import {
@@ -14,29 +16,47 @@ import {
   parseIdempotencyKey,
 } from '../../../shared/http/idempotency-key.js';
 import { ZodValidationPipe } from '../../../shared/http/zod-validation.pipe.js';
+import type { AuthenticatedSession } from '../application/authenticate-session.handler.js';
+import { EndSessionHandler } from '../application/end-session.handler.js';
 import { IssuePowChallengeHandler } from '../application/issue-pow-challenge.handler.js';
 import { LoadKdfParamsHandler } from '../application/load-kdf-params.handler.js';
+import { LoadSessionStateHandler } from '../application/load-session-state.handler.js';
+import { ReauthenticateHandler } from '../application/reauthenticate.handler.js';
 import { RegisterAccountHandler } from '../application/register-account.handler.js';
+import { SignInHandler } from '../application/sign-in.handler.js';
 import {
   PowChallengeResponse,
   PreloginResponse,
   RegisterResponse,
+  SessionStateResponse,
+  SignInResponse,
   toKdfParamsResponse,
   toPowChallengeResponse,
   toRegisterResponse,
+  toSessionStateResponse,
+  toSignInResponse,
 } from './auth.responses.js';
 import type {
   PowRequest,
   PreloginRequest,
+  ReauthRequest,
   RegisterRequest,
+  SignInRequest,
 } from './auth.schemas.js';
 import {
   powRequestSchema,
   preloginRequestSchema,
+  reauthRequestSchema,
   registerRequestSchema,
+  signInRequestSchema,
 } from './auth.schemas.js';
 import { clientContextOf } from './client-context.js';
-import { setSessionCookie } from './session-cookie.js';
+import {
+  clearSessionCookie,
+  readSessionCookie,
+  setSessionCookie,
+} from './session-cookie.js';
+import { CurrentSession, SessionGuard } from './session.guard.js';
 
 @Controller('auth')
 export class AuthController {
@@ -44,6 +64,10 @@ export class AuthController {
     private readonly issuePowChallenge: IssuePowChallengeHandler,
     private readonly loadKdfParams: LoadKdfParamsHandler,
     private readonly registerAccount: RegisterAccountHandler,
+    private readonly signIn: SignInHandler,
+    private readonly endSession: EndSessionHandler,
+    private readonly loadSessionState: LoadSessionStateHandler,
+    private readonly reauthenticate: ReauthenticateHandler,
   ) {}
 
   @Post('pow')
@@ -83,5 +107,55 @@ export class AuthController {
     });
     setSessionCookie(response, sessionToken);
     return toRegisterResponse(result);
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body(new ZodValidationPipe(signInRequestSchema)) body: SignInRequest,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<SignInResponse> {
+    const outcome = await this.signIn.execute({
+      login: body.login,
+      authKey: body.authKey,
+      pow: body.pow ?? null,
+      client: clientContextOf(request),
+    });
+    setSessionCookie(response, outcome.sessionToken);
+    return toSignInResponse(outcome);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    await this.endSession.execute(readSessionCookie(request));
+    clearSessionCookie(response);
+  }
+
+  @Get('session')
+  @UseGuards(SessionGuard)
+  async session(
+    @CurrentSession() session: AuthenticatedSession,
+  ): Promise<SessionStateResponse> {
+    return toSessionStateResponse(await this.loadSessionState.execute(session));
+  }
+
+  @Post('reauth')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(SessionGuard)
+  async reauth(
+    @Body(new ZodValidationPipe(reauthRequestSchema)) body: ReauthRequest,
+    @CurrentSession() session: AuthenticatedSession,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    const token = await this.reauthenticate.execute({
+      session,
+      authKey: body.authKey,
+    });
+    setSessionCookie(response, token);
   }
 }

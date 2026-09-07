@@ -61,3 +61,15 @@ export const registerRequestSchema = z.strictObject({
   pow: powSolutionSchema,
 });
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
+
+export const signInRequestSchema = z.strictObject({
+  login: rawLoginSchema,
+  authKey: base64UrlBytes(AUTH_KEY_BYTES),
+  pow: powSolutionSchema.optional(),
+});
+export type SignInRequest = z.infer<typeof signInRequestSchema>;
+
+export const reauthRequestSchema = z.strictObject({
+  authKey: base64UrlBytes(AUTH_KEY_BYTES),
+});
+export type ReauthRequest = z.infer<typeof reauthRequestSchema>;

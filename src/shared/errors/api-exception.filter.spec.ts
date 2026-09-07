@@ -11,20 +11,28 @@ class AliasLimitExceededError extends DomainError {
 
 const REQUEST_ID = '0b5c8a52-6f1e-4b8e-9d2a-5c1f0e3d7a90';
 
+class SignInLockedError extends DomainError {
+  readonly code = 'ACCOUNT_LOCKED';
+  readonly kind = 'locked';
+  override readonly retryAfterSeconds = 120;
+}
+
 function createHost(): {
   host: ArgumentsHost;
   status: ReturnType<typeof vi.fn>;
   json: ReturnType<typeof vi.fn>;
+  setHeader: ReturnType<typeof vi.fn>;
 } {
   const json = vi.fn();
   const status = vi.fn().mockReturnValue({ json });
+  const setHeader = vi.fn();
   const host = {
     switchToHttp: () => ({
       getRequest: () => ({ id: REQUEST_ID }),
-      getResponse: () => ({ status }),
+      getResponse: () => ({ status, setHeader }),
     }),
   } as unknown as ArgumentsHost;
-  return { host, status, json };
+  return { host, status, json, setHeader };
 }
 
 describe('ApiExceptionFilter', () => {
@@ -49,6 +57,23 @@ describe('ApiExceptionFilter', () => {
         requestId: REQUEST_ID,
       },
     });
+  });
+
+  it('sends Retry-After when the error carries a delay', () => {
+    const { host, status, setHeader } = createHost();
+
+    filter.catch(new SignInLockedError('Locked'), host);
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.LOCKED);
+    expect(setHeader).toHaveBeenCalledWith('Retry-After', '120');
+  });
+
+  it('sends no Retry-After for other errors', () => {
+    const { host, setHeader } = createHost();
+
+    filter.catch(new AliasLimitExceededError('Alias limit reached'), host);
+
+    expect(setHeader).not.toHaveBeenCalled();
   });
 
   it('maps a framework 404 to NOT_FOUND', () => {

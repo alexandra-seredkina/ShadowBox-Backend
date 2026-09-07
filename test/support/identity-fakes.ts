@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { AccountKdfRepository } from '../../src/modules/identity/domain/account-kdf.repository.js';
 import { DecoySaltSource } from '../../src/modules/identity/domain/decoy-salt.source.js';
-import type { KdfParams } from '../../src/modules/identity/domain/kdf-params.js';
+import {
+  KdfParams,
+  standardKdfParams,
+} from '../../src/modules/identity/domain/kdf-params.js';
 import type { Login } from '../../src/modules/identity/domain/login.js';
 import type {
   NewPowChallenge,
@@ -12,6 +15,8 @@ import { PowChallengeRepository } from '../../src/modules/identity/domain/pow-ch
 import type {
   AccountCredentials,
   AccountId,
+  AccountKeys,
+  AccountSummary,
 } from '../../src/modules/identity/domain/account.js';
 import { AccountRepository } from '../../src/modules/identity/domain/account.repository.js';
 import { AccountRegistrar } from '../../src/modules/identity/domain/account-registrar.js';
@@ -29,6 +34,7 @@ import {
 import type {
   SessionDraft,
   SessionId,
+  StoredSession,
 } from '../../src/modules/identity/domain/session.js';
 import { SessionRepository } from '../../src/modules/identity/domain/session.repository.js';
 import {
@@ -72,42 +78,140 @@ export class HashDecoySaltSource implements DecoySaltSource {
   }
 }
 
-/** Accounts, folders, aliases and idempotency records of the registration transaction. */
+interface StoredAccount extends NewAccount {
+  readonly id: AccountId;
+  readonly createdAt: Date;
+  isIpBindingEnabled: boolean;
+}
+
+export class InMemorySessionRepository implements SessionRepository {
+  readonly sessions = new Map<
+    SessionId,
+    { -readonly [K in keyof StoredSession]: StoredSession[K] } & {
+      tokenHash: Uint8Array;
+    }
+  >();
+
+  /** Sessions in creation order, for assertions. */
+  get created(): { accountId: AccountId; draft: SessionDraft }[] {
+    return [...this.drafts];
+  }
+
+  private readonly drafts: { accountId: AccountId; draft: SessionDraft }[] = [];
+
+  /** Defaults to the real clock, which the e2e app uses as well. */
+  constructor(private readonly now: () => Date = () => new Date()) {}
+
+  create(accountId: AccountId, draft: SessionDraft): Promise<SessionId> {
+    const id = randomUUID() as SessionId;
+    this.drafts.push({ accountId, draft });
+    this.sessions.set(id, {
+      id,
+      accountId,
+      tokenHash: draft.tokenHash,
+      ip: draft.ip,
+      isIpBound: draft.isIpBound,
+      reauthUntil: null,
+      lastActiveAt: this.now(),
+      expiresAt: draft.expiresAt,
+    });
+    return Promise.resolve(id);
+  }
+
+  findByTokenHash(tokenHash: Uint8Array): Promise<StoredSession | null> {
+    const found = [...this.sessions.values()].find((session) =>
+      Buffer.from(session.tokenHash).equals(tokenHash),
+    );
+    return Promise.resolve(found === undefined ? null : { ...found });
+  }
+
+  touch(id: SessionId, now: Date): Promise<void> {
+    const session = this.sessions.get(id);
+    if (session !== undefined) {
+      session.lastActiveAt = now;
+    }
+    return Promise.resolve();
+  }
+
+  grantReauth(
+    id: SessionId,
+    change: { readonly tokenHash: Uint8Array; readonly reauthUntil: Date },
+  ): Promise<void> {
+    const session = this.sessions.get(id);
+    if (session === undefined) {
+      return Promise.reject(new Error('Unknown session'));
+    }
+    session.tokenHash = change.tokenHash;
+    session.reauthUntil = change.reauthUntil;
+    return Promise.resolve();
+  }
+
+  delete(id: SessionId): Promise<void> {
+    this.sessions.delete(id);
+    return Promise.resolve();
+  }
+
+  deleteByTokenHash(tokenHash: Uint8Array): Promise<void> {
+    for (const [id, session] of this.sessions) {
+      if (Buffer.from(session.tokenHash).equals(tokenHash)) {
+        this.sessions.delete(id);
+      }
+    }
+    return Promise.resolve();
+  }
+}
+
+/** Accounts, aliases and idempotency records of the registration transaction. */
 export class InMemoryAccountStore
   implements AccountRegistrar, AccountRepository, IdempotencyRepository
 {
-  readonly accounts = new Map<AccountId, NewAccount & { id: AccountId }>();
+  readonly accounts = new Map<AccountId, StoredAccount>();
   readonly aliasAddresses = new Set<string>();
-  readonly sessions: { accountId: AccountId; draft: SessionDraft }[] = [];
   readonly records = new Map<
     string,
     StoredIdempotentResult & { expiresAt: Date }
   >();
   /** Addresses that already exist, to exercise the retry on collision. */
   readonly takenAddresses = new Set<string>();
+  readonly sessionStore: InMemorySessionRepository;
 
-  constructor(private readonly now: () => Date = () => new Date(0)) {}
+  constructor(
+    private readonly now: () => Date = () => new Date(0),
+    sessions?: InMemorySessionRepository,
+  ) {
+    this.sessionStore = sessions ?? new InMemorySessionRepository(now);
+  }
 
-  register(
+  /** Sessions opened by registrations, in order. */
+  get sessions(): { accountId: AccountId; draft: SessionDraft }[] {
+    return this.sessionStore.created;
+  }
+
+  async register(
     registration: Registration,
     idempotency: IdempotencyClaim | null,
   ): Promise<RegistrationResult> {
     const { account, firstAlias } = registration;
     const address = `${firstAlias.localPart}@${firstAlias.domain}`;
     if ([...this.accounts.values()].some((a) => a.login === account.login)) {
-      return Promise.reject(new LoginTakenError());
+      throw new LoginTakenError();
     }
     if (this.takenAddresses.has(address) || this.aliasAddresses.has(address)) {
-      return Promise.reject(new AliasAddressTakenError());
+      throw new AliasAddressTakenError();
     }
     if (idempotency !== null && this.records.has(idempotency.key)) {
-      return Promise.reject(new IdempotencyKeyTakenError());
+      throw new IdempotencyKeyTakenError();
     }
     const id = randomUUID() as AccountId;
     const createdAt = this.now();
-    this.accounts.set(id, { ...account, id });
+    this.accounts.set(id, {
+      ...account,
+      id,
+      createdAt,
+      isIpBindingEnabled: true,
+    });
     this.aliasAddresses.add(address);
-    this.sessions.push({ accountId: id, draft: registration.session });
+    await this.sessionStore.create(id, registration.session);
     const result: RegistrationResult = {
       account: {
         id,
@@ -137,16 +241,41 @@ export class InMemoryAccountStore
         expiresAt: idempotency.expiresAt,
       });
     }
-    return Promise.resolve(result);
+    return result;
   }
 
   findCredentialsById(id: AccountId): Promise<AccountCredentials | null> {
-    const account = this.accounts.get(id);
-    return Promise.resolve(
-      account === undefined
-        ? null
-        : { id, authKeyHash: account.authKeyHash, isIpBindingEnabled: true },
-    );
+    return Promise.resolve(this.credentialsOf(this.accounts.get(id)));
+  }
+
+  findCredentialsByLogin(login: Login): Promise<AccountCredentials | null> {
+    const account = [...this.accounts.values()].find((a) => a.login === login);
+    return Promise.resolve(this.credentialsOf(account));
+  }
+
+  loadSummary(id: AccountId): Promise<AccountSummary> {
+    const account = this.require(id);
+    return Promise.resolve({
+      id,
+      login: account.login,
+      createdAt: account.createdAt,
+      isIpBindingEnabled: account.isIpBindingEnabled,
+      activeAliases: 1,
+    });
+  }
+
+  loadKeys(id: AccountId): Promise<AccountKeys> {
+    const account = this.require(id);
+    return Promise.resolve({
+      publicKey: account.publicKey,
+      encryptedPrivateKey: account.encryptedPrivateKey,
+      kdf: account.kdf,
+    });
+  }
+
+  updateAuthKeyHash(id: AccountId, authKeyHash: string): Promise<void> {
+    this.accounts.set(id, { ...this.require(id), authKeyHash });
+    return Promise.resolve();
   }
 
   findByKey(key: string, now: Date): Promise<StoredIdempotentResult | null> {
@@ -155,14 +284,25 @@ export class InMemoryAccountStore
       record === undefined || record.expiresAt <= now ? null : record,
     );
   }
-}
 
-export class InMemorySessionRepository implements SessionRepository {
-  readonly created: { accountId: AccountId; draft: SessionDraft }[] = [];
+  private require(id: AccountId): StoredAccount {
+    const account = this.accounts.get(id);
+    if (account === undefined) {
+      throw new Error(`Unknown account ${id}`);
+    }
+    return account;
+  }
 
-  create(accountId: AccountId, draft: SessionDraft): Promise<SessionId> {
-    this.created.push({ accountId, draft });
-    return Promise.resolve(randomUUID() as SessionId);
+  private credentialsOf(
+    account: StoredAccount | undefined,
+  ): AccountCredentials | null {
+    return account === undefined
+      ? null
+      : {
+          id: account.id,
+          authKeyHash: account.authKeyHash,
+          isIpBindingEnabled: account.isIpBindingEnabled,
+        };
   }
 }
 
@@ -178,7 +318,45 @@ export class FakeAuthKeyHasher implements AuthKeyHasher {
     );
   }
 
-  needsRehash(): boolean {
+  needsRehash(_hash: string): boolean {
     return false;
   }
+}
+
+/** Registers an account straight in the store, bypassing PoW and hashing cost. */
+export async function seedAccount(
+  store: InMemoryAccountStore,
+  params: { readonly login: string; readonly authKey: Uint8Array },
+): Promise<RegistrationResult> {
+  const hash = await new FakeAuthKeyHasher().hash(params.authKey);
+  return store.register(
+    {
+      account: {
+        login: params.login as Login,
+        authKeyHash: hash,
+        kdf: standardKdfParams(new Uint8Array(16).fill(2)),
+        publicKey: new Uint8Array(32).fill(3),
+        encryptedPrivateKey: {
+          nonce: new Uint8Array(24).fill(4),
+          ciphertext: new Uint8Array(48).fill(5),
+        },
+        recoveryEncryptedPrivateKey: {
+          nonce: new Uint8Array(24).fill(6),
+          ciphertext: new Uint8Array(48).fill(7),
+        },
+      },
+      firstAlias: {
+        localPart: randomUUID().slice(0, 10),
+        domain: 'shadowbox.test',
+      },
+      session: {
+        tokenHash: new Uint8Array(32),
+        ip: { hash: new Uint8Array(32), keyVersion: 1 },
+        isIpBound: true,
+        device: 'Other · Other',
+        expiresAt: new Date(8.64e15),
+      },
+    },
+    null,
+  );
 }

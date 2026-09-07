@@ -62,6 +62,7 @@ interface ApiErrorBody {
 
 interface MappedError {
   readonly status: number;
+  readonly retryAfterSeconds?: number;
   readonly code: string;
   readonly message: string;
   readonly details?: readonly ValidationIssue[];
@@ -97,6 +98,9 @@ export class ApiExceptionFilter implements ExceptionFilter {
         ...(mapped.details === undefined ? {} : { details: mapped.details }),
       },
     };
+    if (mapped.retryAfterSeconds !== undefined) {
+      response.setHeader('Retry-After', String(mapped.retryAfterSeconds));
+    }
     response.status(mapped.status).json(body);
   }
 }
@@ -127,6 +131,9 @@ function mapException(exception: unknown): MappedError {
       status: STATUS_BY_KIND[exception.kind],
       code: exception.code,
       message: exception.message,
+      ...(exception.retryAfterSeconds === null
+        ? {}
+        : { retryAfterSeconds: exception.retryAfterSeconds }),
       ...(exception instanceof ValidationFailedError
         ? { details: exception.details }
         : {}),

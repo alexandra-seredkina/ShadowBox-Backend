@@ -19,13 +19,9 @@ import type { ClientContext } from '../domain/client-context.js';
 import {
   AliasAddressTakenError,
   LoginReservedError,
-  PowInvalidError,
 } from '../domain/identity.errors.js';
 import { standardKdfParams } from '../domain/kdf-params.js';
 import { Login, parseLogin } from '../domain/login.js';
-import type { PowChallengeId } from '../domain/pow-challenge.js';
-import { isPowSolution } from '../domain/pow-challenge.js';
-import { PowChallengeRepository } from '../domain/pow-challenge.repository.js';
 import {
   fromRegistrationSnapshot,
   REGISTER_OPERATION,
@@ -33,6 +29,7 @@ import {
 } from '../domain/registration.js';
 import { isReservedLogin } from '../domain/reserved-logins.js';
 import { SessionRepository } from '../domain/session.repository.js';
+import { PowSolution, PowVerifier } from './pow-verifier.js';
 import { SessionIssuer } from './session-issuer.js';
 
 /** A collision of two random 10-character addresses is already unlikely. */
@@ -45,7 +42,7 @@ export interface RegisterAccountCommand {
   readonly publicKey: Uint8Array;
   readonly encryptedPrivateKey: EncryptedPrivateKey;
   readonly recoveryEncryptedPrivateKey: EncryptedPrivateKey;
-  readonly pow: { readonly challengeId: string; readonly nonce: string };
+  readonly pow: PowSolution;
   readonly idempotencyKey: string | null;
   readonly client: ClientContext;
 }
@@ -85,7 +82,7 @@ export class RegisterAccountHandler {
     private readonly registrar: AccountRegistrar,
     private readonly accounts: AccountRepository,
     private readonly sessions: SessionRepository,
-    private readonly challenges: PowChallengeRepository,
+    private readonly powVerifier: PowVerifier,
     private readonly idempotency: IdempotencyRepository,
     private readonly hasher: AuthKeyHasher,
     private readonly sessionIssuer: SessionIssuer,
@@ -106,7 +103,7 @@ export class RegisterAccountHandler {
     if (replayed !== null) {
       return replayed;
     }
-    await this.verifyPow(command.pow);
+    await this.powVerifier.verify(command.pow, 'register');
     try {
       return await this.registerNew(login, command, requestHash);
     } catch (error) {
@@ -114,20 +111,6 @@ export class RegisterAccountHandler {
         throw error;
       }
       return (await this.replay(command, requestHash)) ?? Promise.reject(error);
-    }
-  }
-
-  private async verifyPow(pow: RegisterAccountCommand['pow']): Promise<void> {
-    const challenge = await this.challenges.consume(
-      pow.challengeId as PowChallengeId,
-    );
-    const attempt = {
-      purpose: 'register',
-      nonce: pow.nonce,
-      now: this.clock.now(),
-    } as const;
-    if (challenge === null || !isPowSolution(challenge, attempt)) {
-      throw new PowInvalidError();
     }
   }
 

@@ -20,6 +20,8 @@ export type DomainErrorKind = (typeof DOMAIN_ERROR_KINDS)[number];
 export abstract class DomainError extends Error {
   abstract readonly code: string;
   abstract readonly kind: DomainErrorKind;
+  /** Sent as Retry-After with locked and rate-limited answers. */
+  readonly retryAfterSeconds: number | null = null;
 
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);

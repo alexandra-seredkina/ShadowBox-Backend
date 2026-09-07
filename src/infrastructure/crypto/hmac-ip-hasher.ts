@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { AppConfig } from '../../config/app-config.js';
 import { IpHash, IpHasher } from '../../shared/kernel/ip-hasher.js';
@@ -21,5 +21,16 @@ export class HmacIpHasher implements IpHasher {
       .update(ip, 'utf8')
       .digest();
     return { hash, keyVersion: this.keyVersion };
+  }
+
+  matches(ip: string, stored: IpHash): boolean {
+    if (stored.keyVersion !== this.keyVersion) {
+      return false;
+    }
+    const current = this.hash(ip).hash;
+    return (
+      current.length === stored.hash.length &&
+      timingSafeEqual(current, stored.hash)
+    );
   }
 }

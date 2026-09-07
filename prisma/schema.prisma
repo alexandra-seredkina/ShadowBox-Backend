@@ -251,3 +251,14 @@ model IdempotencyRecord {
   @@index([accountId])
   @@map("idempotency_records")
 }
+
+/// Fixed-window counters for failed sign-ins and rate limits. The key is an
+/// HMAC of the scope and subject (login, IP), never the subject itself.
+model AttemptCounter {
+  key          Bytes    @id
+  count        Int
+  windowEndsAt DateTime @map("window_ends_at") @db.Timestamptz(3)
+
+  @@index([windowEndsAt])
+  @@map("attempt_counters")
+}

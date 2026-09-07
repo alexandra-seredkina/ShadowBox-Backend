@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
+import { AuthenticateSessionHandler } from './application/authenticate-session.handler.js';
+import { EndSessionHandler } from './application/end-session.handler.js';
 import { IssuePowChallengeHandler } from './application/issue-pow-challenge.handler.js';
 import { LoadKdfParamsHandler } from './application/load-kdf-params.handler.js';
+import { LoadSessionStateHandler } from './application/load-session-state.handler.js';
+import { PowVerifier } from './application/pow-verifier.js';
+import { ReauthenticateHandler } from './application/reauthenticate.handler.js';
 import { RegisterAccountHandler } from './application/register-account.handler.js';
 import { SessionIssuer } from './application/session-issuer.js';
+import { SignInHandler } from './application/sign-in.handler.js';
 import { AccountKdfRepository } from './domain/account-kdf.repository.js';
 import { AccountRepository } from './domain/account.repository.js';
 import { AccountRegistrar } from './domain/account-registrar.js';
@@ -20,6 +26,7 @@ import { PrismaPowChallengeRepository } from './infrastructure/prisma-pow-challe
 import { PrismaSessionRepository } from './infrastructure/prisma-session.repository.js';
 import { SodiumAuthKeyHasher } from './infrastructure/sodium-auth-key-hasher.js';
 import { AuthController } from './presentation/auth.controller.js';
+import { SessionGuard } from './presentation/session.guard.js';
 
 @Module({
   controllers: [AuthController],
@@ -27,6 +34,13 @@ import { AuthController } from './presentation/auth.controller.js';
     IssuePowChallengeHandler,
     LoadKdfParamsHandler,
     RegisterAccountHandler,
+    SignInHandler,
+    EndSessionHandler,
+    LoadSessionStateHandler,
+    ReauthenticateHandler,
+    AuthenticateSessionHandler,
+    SessionGuard,
+    PowVerifier,
     SessionIssuer,
     { provide: PowChallengeRepository, useClass: PrismaPowChallengeRepository },
     { provide: AccountKdfRepository, useClass: PrismaAccountKdfRepository },
@@ -37,5 +51,7 @@ import { AuthController } from './presentation/auth.controller.js';
     { provide: DecoySaltSource, useClass: HmacDecoySaltSource },
     { provide: PowDifficultyPolicy, useClass: ConfiguredPowDifficultyPolicy },
   ],
+  /** Other modules protect their routes with SessionGuard and CurrentSession. */
+  exports: [AuthenticateSessionHandler, SessionGuard],
 })
 export class IdentityModule {}
