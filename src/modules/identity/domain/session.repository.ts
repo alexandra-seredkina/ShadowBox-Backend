@@ -1,3 +1,4 @@
+import type { IpHash } from '../../../shared/kernel/ip-hasher.js';
 import type { AccountId } from './account.js';
 import type { SessionDraft, SessionId, StoredSession } from './session.js';
 
@@ -18,6 +19,9 @@ export abstract class SessionRepository {
     id: SessionId,
     change: { readonly tokenHash: Uint8Array; readonly reauthUntil: Date },
   ): Promise<void>;
+
+  /** Rewrites the IP binding under the current key after a key rotation. */
+  abstract updateIpHash(id: SessionId, ip: IpHash): Promise<void>;
 
   abstract delete(id: SessionId): Promise<void>;
 

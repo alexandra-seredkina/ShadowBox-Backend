@@ -104,4 +104,16 @@ describe('AuthenticateSessionHandler', () => {
 
     expect(sessions.sessions.get(id)?.lastActiveAt).toEqual(clock.now());
   });
+
+  it('moves a bound session to the current IP key after a rotation', async () => {
+    const { id, cookie } = await open(true);
+    const stored = sessions.sessions.get(id);
+    if (stored !== undefined) {
+      stored.ip = { hash: Buffer.from(IP), keyVersion: 0 };
+    }
+
+    await handler.execute({ token: cookie, ip: IP });
+
+    expect(sessions.sessions.get(id)?.ip.keyVersion).toBe(1);
+  });
 });

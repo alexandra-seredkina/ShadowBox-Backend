@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { IpHash } from '../../../shared/kernel/ip-hasher.js';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service.js';
 import type { AccountId } from '../domain/account.js';
 import type {
@@ -65,6 +66,16 @@ export class PrismaSessionRepository implements SessionRepository {
         reauthUntil: change.reauthUntil,
       },
       select: { id: true },
+    });
+  }
+
+  async updateIpHash(id: SessionId, ip: IpHash): Promise<void> {
+    await this.prisma.session.updateMany({
+      where: { id },
+      data: {
+        ipHash: Uint8Array.from(ip.hash),
+        ipHashKeyVersion: ip.keyVersion,
+      },
     });
   }
 

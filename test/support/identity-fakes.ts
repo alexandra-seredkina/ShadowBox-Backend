@@ -37,6 +37,7 @@ import type {
   StoredSession,
 } from '../../src/modules/identity/domain/session.js';
 import { SessionRepository } from '../../src/modules/identity/domain/session.repository.js';
+import type { IpHash } from '../../src/shared/kernel/ip-hasher.js';
 import {
   IdempotencyClaim,
   IdempotencyKeyTakenError,
@@ -143,6 +144,14 @@ export class InMemorySessionRepository implements SessionRepository {
     }
     session.tokenHash = change.tokenHash;
     session.reauthUntil = change.reauthUntil;
+    return Promise.resolve();
+  }
+
+  updateIpHash(id: SessionId, ip: IpHash): Promise<void> {
+    const session = this.sessions.get(id);
+    if (session !== undefined) {
+      session.ip = ip;
+    }
     return Promise.resolve();
   }
 

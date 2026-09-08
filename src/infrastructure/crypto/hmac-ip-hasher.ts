@@ -5,32 +5,46 @@ import { IpHash, IpHasher } from '../../shared/kernel/ip-hasher.js';
 
 const DOMAIN_LABEL = 'shadowbox/client-ip/v1\0';
 
+function hmac(key: Uint8Array, ip: string): Buffer {
+  return createHmac('sha256', key)
+    .update(DOMAIN_LABEL)
+    .update(ip, 'utf8')
+    .digest();
+}
+
 @Injectable()
 export class HmacIpHasher implements IpHasher {
-  private readonly key: Uint8Array;
-  private readonly keyVersion: number;
+  private readonly keysByVersion: ReadonlyMap<number, Uint8Array>;
+  private readonly currentVersion: number;
+  private readonly currentKey: Uint8Array;
 
   constructor(config: AppConfig) {
-    this.key = config.ipHashKey;
-    this.keyVersion = config.ipHashKeyVersion;
+    this.currentVersion = config.ipHashKeyVersion;
+    this.currentKey = config.ipHashKey;
+    const keys = new Map([[config.ipHashKeyVersion, config.ipHashKey]]);
+    if (config.ipHashPreviousKey !== null) {
+      keys.set(config.ipHashKeyVersion - 1, config.ipHashPreviousKey);
+    }
+    this.keysByVersion = keys;
   }
 
   hash(ip: string): IpHash {
-    const hash = createHmac('sha256', this.key)
-      .update(DOMAIN_LABEL)
-      .update(ip, 'utf8')
-      .digest();
-    return { hash, keyVersion: this.keyVersion };
+    return { hash: hmac(this.currentKey, ip), keyVersion: this.currentVersion };
   }
 
   matches(ip: string, stored: IpHash): boolean {
-    if (stored.keyVersion !== this.keyVersion) {
+    const key = this.keysByVersion.get(stored.keyVersion);
+    if (key === undefined) {
       return false;
     }
-    const current = this.hash(ip).hash;
+    const candidate = hmac(key, ip);
     return (
-      current.length === stored.hash.length &&
-      timingSafeEqual(current, stored.hash)
+      candidate.length === stored.hash.length &&
+      timingSafeEqual(candidate, stored.hash)
     );
+  }
+
+  isCurrent(stored: IpHash): boolean {
+    return stored.keyVersion === this.currentVersion;
   }
 }

@@ -25,6 +25,8 @@ describe('loadConfig', () => {
     expect(config.logLevel).toBe('info');
     expect(config.powDifficulty).toBe(20);
     expect(config.ipHashKeyVersion).toBe(1);
+    expect(config.ipHashPreviousKey).toBeNull();
+    expect(config.trustedProxies).toEqual([]);
   });
 
   it('normalizes allowed origins', () => {
@@ -90,6 +92,34 @@ describe('loadConfig', () => {
       loadConfig({ ...validEnv, MAIL_DOMAIN: 'mx.shadow-box.example' })
         .mailDomain,
     ).toBe('mx.shadow-box.example');
+  });
+
+  it('parses the trusted proxy list', () => {
+    expect(
+      loadConfig({ ...validEnv, TRUSTED_PROXIES: '172.28.10.10, ::1' })
+        .trustedProxies,
+    ).toEqual(['172.28.10.10', '::1']);
+  });
+
+  it.each(['nginx', '172.28.10.0/24', '300.1.1.1'])(
+    'rejects the proxy %j',
+    (proxy) => {
+      expect(() => loadConfig({ ...validEnv, TRUSTED_PROXIES: proxy })).toThrow(
+        ConfigValidationError,
+      );
+    },
+  );
+
+  it('treats an empty previous IP key as absent', () => {
+    expect(
+      loadConfig({ ...validEnv, IP_HASH_PREVIOUS_KEY: '' }).ipHashPreviousKey,
+    ).toBeNull();
+  });
+
+  it('rejects a short previous IP key', () => {
+    expect(() =>
+      loadConfig({ ...validEnv, IP_HASH_PREVIOUS_KEY: 'c2hvcnQ' }),
+    ).toThrow(ConfigValidationError);
   });
 
   it('rejects an unknown log level', () => {

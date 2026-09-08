@@ -15,6 +15,8 @@ export function createTestConfig(
     mailDomain: 'shadowbox.test',
     ipHashKey: new Uint8Array(32).fill(43),
     ipHashKeyVersion: 1,
+    ipHashPreviousKey: null,
+    trustedProxies: [],
     ...overrides,
   });
 }

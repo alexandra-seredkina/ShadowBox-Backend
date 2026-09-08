@@ -54,6 +54,12 @@ export class AuthenticateSessionHandler {
       await this.sessions.delete(session.id);
       throw new UnauthenticatedError();
     }
+    if (session.isIpBound && !this.ipHasher.isCurrent(session.ip)) {
+      await this.sessions.updateIpHash(
+        session.id,
+        this.ipHasher.hash(command.ip),
+      );
+    }
     if (needsTouch(session, now)) {
       await this.sessions.touch(session.id, now);
     }

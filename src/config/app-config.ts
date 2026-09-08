@@ -19,6 +19,9 @@ export interface AppConfigValues {
   /** HMAC key for client IPs; the version is stored next to every hash. */
   readonly ipHashKey: Uint8Array;
   readonly ipHashKeyVersion: number;
+  /** Version ipHashKeyVersion - 1; null when no rotation is in progress. */
+  readonly ipHashPreviousKey: Uint8Array | null;
+  readonly trustedProxies: readonly string[];
 }
 
 export class AppConfig implements AppConfigValues {
@@ -31,6 +34,8 @@ export class AppConfig implements AppConfigValues {
   readonly mailDomain: string;
   readonly ipHashKey: Uint8Array;
   readonly ipHashKeyVersion: number;
+  readonly ipHashPreviousKey: Uint8Array | null;
+  readonly trustedProxies: readonly string[];
 
   constructor(values: AppConfigValues) {
     this.port = values.port;
@@ -42,6 +47,8 @@ export class AppConfig implements AppConfigValues {
     this.mailDomain = values.mailDomain;
     this.ipHashKey = values.ipHashKey;
     this.ipHashKeyVersion = values.ipHashKeyVersion;
+    this.ipHashPreviousKey = values.ipHashPreviousKey;
+    this.trustedProxies = values.trustedProxies;
   }
 }
 
@@ -70,5 +77,7 @@ export function loadConfig(
     mailDomain: result.data.MAIL_DOMAIN,
     ipHashKey: result.data.IP_HASH_KEY,
     ipHashKeyVersion: result.data.IP_HASH_KEY_VERSION,
+    ipHashPreviousKey: result.data.IP_HASH_PREVIOUS_KEY ?? null,
+    trustedProxies: result.data.TRUSTED_PROXIES,
   });
 }

@@ -15,6 +15,8 @@ import {
   IDEMPOTENCY_KEY_HEADER,
   parseIdempotencyKey,
 } from '../../../shared/http/idempotency-key.js';
+import { RateLimit } from '../../../shared/http/rate-limit.js';
+import { readSessionCookie } from '../../../shared/http/session-cookie.js';
 import { ZodValidationPipe } from '../../../shared/http/zod-validation.pipe.js';
 import type { AuthenticatedSession } from '../application/authenticate-session.handler.js';
 import { EndSessionHandler } from '../application/end-session.handler.js';
@@ -51,12 +53,10 @@ import {
   signInRequestSchema,
 } from './auth.schemas.js';
 import { clientContextOf } from './client-context.js';
-import {
-  clearSessionCookie,
-  readSessionCookie,
-  setSessionCookie,
-} from './session-cookie.js';
+import { clearSessionCookie, setSessionCookie } from './session-cookie.js';
 import { CurrentSession, SessionGuard } from './session.guard.js';
+
+const MINUTE_MS = 60 * 1000;
 
 @Controller('auth')
 export class AuthController {
@@ -71,6 +71,7 @@ export class AuthController {
   ) {}
 
   @Post('pow')
+  @RateLimit({ scope: 'auth.pow', limit: 10, windowMs: MINUTE_MS, per: 'ip' })
   @HttpCode(HttpStatus.OK)
   async pow(
     @Body(new ZodValidationPipe(powRequestSchema)) body: PowRequest,
@@ -80,6 +81,12 @@ export class AuthController {
   }
 
   @Post('prelogin')
+  @RateLimit({
+    scope: 'auth.prelogin',
+    limit: 20,
+    windowMs: MINUTE_MS,
+    per: 'ip',
+  })
   @HttpCode(HttpStatus.OK)
   async prelogin(
     @Body(new ZodValidationPipe(preloginRequestSchema)) body: PreloginRequest,
@@ -89,6 +96,12 @@ export class AuthController {
   }
 
   @Post('register')
+  @RateLimit({
+    scope: 'auth.register',
+    limit: 3,
+    windowMs: 60 * MINUTE_MS,
+    per: 'ip',
+  })
   @HttpCode(HttpStatus.CREATED)
   async register(
     @Body(new ZodValidationPipe(registerRequestSchema)) body: RegisterRequest,
@@ -145,6 +158,12 @@ export class AuthController {
   }
 
   @Post('reauth')
+  @RateLimit({
+    scope: 'auth.reauth',
+    limit: 5,
+    windowMs: 15 * MINUTE_MS,
+    per: 'session',
+  })
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(SessionGuard)
   async reauth(

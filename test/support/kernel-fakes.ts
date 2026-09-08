@@ -38,6 +38,10 @@ export class PlainIpHasher implements IpHasher {
   matches(ip: string, stored: IpHash): boolean {
     return Buffer.from(stored.hash).toString('utf8') === ip;
   }
+
+  isCurrent(stored: IpHash): boolean {
+    return stored.keyVersion === 1;
+  }
 }
 
 export class InMemoryAttemptCounter implements AttemptCounter {

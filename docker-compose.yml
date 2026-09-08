@@ -29,6 +29,9 @@ services:
       MAIL_DOMAIN: ${MAIL_DOMAIN:-shadowbox.test}
       IP_HASH_KEY: ${IP_HASH_KEY:?set IP_HASH_KEY in .env}
       IP_HASH_KEY_VERSION: ${IP_HASH_KEY_VERSION:-1}
+      IP_HASH_PREVIOUS_KEY: ${IP_HASH_PREVIOUS_KEY:-}
+      # Only nginx may tell the backend who the client is
+      TRUSTED_PROXIES: 172.28.10.10
     volumes:
       - .:/app
       - /app/node_modules
@@ -47,6 +50,9 @@ services:
 
   nginx:
     build: ./nginx
+    networks:
+      default:
+        ipv4_address: 172.28.10.10
     ports:
       - '127.0.0.1:${HTTP_PORT:-8080}:80'
     volumes:
@@ -54,6 +60,13 @@ services:
     depends_on:
       - backend
       - frontend
+
+networks:
+  default:
+    ipam:
+      config:
+        # Fixed so the backend can trust exactly the nginx address above
+        - subnet: 172.28.10.0/24
 
 volumes:
   db_data:

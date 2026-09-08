@@ -11,7 +11,8 @@ import {
 } from '../application/authenticate-session.handler.js';
 import { UnauthenticatedError } from '../domain/identity.errors.js';
 import { clientContextOf } from './client-context.js';
-import { clearSessionCookie, readSessionCookie } from './session-cookie.js';
+import { readSessionCookie } from '../../../shared/http/session-cookie.js';
+import { clearSessionCookie } from './session-cookie.js';
 
 const sessionsByRequest = new WeakMap<Request, AuthenticatedSession>();
 
