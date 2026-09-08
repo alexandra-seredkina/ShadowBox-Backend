@@ -21,7 +21,10 @@ export interface TestAppOptions {
   readonly config?: Partial<AppConfigValues>;
 }
 
-/** Boots the real HTTP pipeline with test config and no database. */
+/**
+ * Boots the real HTTP pipeline with test config. Without `prisma` there is no
+ * database, so the attempt counters live in memory too.
+ */
 export async function createTestApp(
   options: TestAppOptions,
 ): Promise<NestExpressApplication> {
@@ -29,9 +32,12 @@ export async function createTestApp(
     .overrideProvider(AppConfig)
     .useValue(createTestConfig(options.config))
     .overrideProvider(PrismaService)
-    .useValue(options.prisma ?? {})
-    .overrideProvider(AttemptCounter)
-    .useValue(new InMemoryAttemptCounter());
+    .useValue(options.prisma ?? {});
+  if (options.prisma === undefined) {
+    builder = builder
+      .overrideProvider(AttemptCounter)
+      .useValue(new InMemoryAttemptCounter());
+  }
   for (const override of options.overrides ?? []) {
     builder = builder
       .overrideProvider(override.provide)
