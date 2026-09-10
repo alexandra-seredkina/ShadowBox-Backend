@@ -19,11 +19,13 @@ export interface TestAppOptions {
   readonly prisma?: unknown;
   readonly overrides?: readonly ProviderOverride[];
   readonly config?: Partial<AppConfigValues>;
+  /** Keep the PostgreSQL attempt counters; only with a real database in `prisma`. */
+  readonly useDatabaseCounters?: boolean;
 }
 
 /**
- * Boots the real HTTP pipeline with test config. Without `prisma` there is no
- * database, so the attempt counters live in memory too.
+ * Boots the real HTTP pipeline with test config. Attempt counters live in
+ * memory unless the test runs on a database and asks for the real ones.
  */
 export async function createTestApp(
   options: TestAppOptions,
@@ -33,7 +35,7 @@ export async function createTestApp(
     .useValue(createTestConfig(options.config))
     .overrideProvider(PrismaService)
     .useValue(options.prisma ?? {});
-  if (options.prisma === undefined) {
+  if (options.useDatabaseCounters !== true) {
     builder = builder
       .overrideProvider(AttemptCounter)
       .useValue(new InMemoryAttemptCounter());

@@ -101,6 +101,7 @@ describe('Identity (e2e on PostgreSQL)', () => {
     app = await createTestApp({
       rootModule: AppModule,
       prisma,
+      useDatabaseCounters: true,
       config: { trustedProxies: LOOPBACK },
     });
     server = app.getHttpServer();
