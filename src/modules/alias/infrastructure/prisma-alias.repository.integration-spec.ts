@@ -248,6 +248,38 @@ describe('PrismaAliasRepository', () => {
     await expect(directory.isOwnFolder(other, folder.id)).resolves.toBe(false);
   });
 
+  it('revokes expired temporary addresses of every owner, once', async () => {
+    const expired = await repository.create(
+      newAlias(kage, { expiresAt: NOW }),
+      options,
+    );
+    const theirs = await repository.create(
+      newAlias(other, { expiresAt: NOW }),
+      options,
+    );
+    const live = await repository.create(newAlias(kage), options);
+    const permanent = await repository.create(
+      newAlias(kage, { kind: 'permanent', expiresAt: null }),
+      options,
+    );
+
+    await expect(repository.revokeExpired(NOW)).resolves.toBe(2);
+    await expect(repository.revokeExpired(NOW)).resolves.toBe(0);
+
+    const rows = await prisma.alias.findMany({
+      select: { id: true, status: true, encryptedLabel: true },
+    });
+    const statusOf = (id: string): string | undefined =>
+      rows.find((row) => row.id === id)?.status;
+    expect(statusOf(expired.id)).toBe('revoked');
+    expect(statusOf(theirs.id)).toBe('revoked');
+    expect(statusOf(live.id)).toBe('active');
+    expect(statusOf(permanent.id)).toBe('active');
+    expect(
+      rows.find((row) => row.id === expired.id)?.encryptedLabel,
+    ).toBeNull();
+  });
+
   it('treats an unknown id as missing', async () => {
     await expect(
       repository.findOwn(

@@ -185,14 +185,31 @@ export class PrismaAliasRepository implements AliasRepository {
   async revoke(ownerId: OwnerId, id: AliasId, now: Date): Promise<void> {
     await this.prisma.alias.updateMany({
       where: { ...liveWhere(ownerId, now), id },
-      data: {
-        status: 'revoked',
-        revokedAt: now,
-        encryptedLabel: Prisma.DbNull,
-        folderId: null,
-      },
+      data: revokedFields(now),
     });
   }
+
+  async revokeExpired(now: Date): Promise<number> {
+    const { count } = await this.prisma.alias.updateMany({
+      where: {
+        kind: 'temporary',
+        status: { in: ['active', 'disabled'] },
+        expiresAt: { lte: now },
+      },
+      data: revokedFields(now),
+    });
+    return count;
+  }
+}
+
+/** Shared by single and bulk revocation so both leave the same traces. */
+function revokedFields(now: Date): Prisma.AliasUncheckedUpdateManyInput {
+  return {
+    status: 'revoked',
+    revokedAt: now,
+    encryptedLabel: Prisma.DbNull,
+    folderId: null,
+  };
 }
 
 /** Serialises writes that may add an active address for the same owner. */

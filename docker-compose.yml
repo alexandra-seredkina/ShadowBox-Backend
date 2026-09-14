@@ -18,10 +18,10 @@ services:
       retries: 10
 
   backend:
-    build:
+    build: &backend-build
       context: .
       dockerfile: Dockerfile.dev
-    environment:
+    environment: &backend-env
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       PORT: 3000
       ALLOWED_ORIGINS: http://localhost:${HTTP_PORT:-8080},http://127.0.0.1:${HTTP_PORT:-8080}
@@ -32,11 +32,31 @@ services:
       IP_HASH_PREVIOUS_KEY: ${IP_HASH_PREVIOUS_KEY:-}
       # Only nginx may tell the backend who the client is
       TRUSTED_PROXIES: 172.28.10.10
-    volumes:
+    volumes: &backend-volumes
       - .:/app
       - /app/node_modules
     depends_on:
       db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # Scheduled jobs (alias expiry, later clean-ups). Starts once the backend has
+  # generated the Prisma client and applied the migrations.
+  worker:
+    build: *backend-build
+    environment: *backend-env
+    volumes: *backend-volumes
+    command: ['npm', 'run', 'start:worker']
+    depends_on:
+      backend:
         condition: service_healthy
 
   frontend:

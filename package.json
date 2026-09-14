@@ -13,6 +13,8 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "start:worker": "nest start --watch --entryFile worker",
+    "start:worker:prod": "node dist/worker",
     "lint": "oxlint -c oxlint.json --type-aware --deny-warnings src/ test/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

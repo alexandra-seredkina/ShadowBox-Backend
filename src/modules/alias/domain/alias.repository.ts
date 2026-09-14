@@ -59,4 +59,11 @@ export abstract class AliasRepository {
 
   /** Revokes for good and wipes the label and folder. */
   abstract revoke(ownerId: OwnerId, id: AliasId, now: Date): Promise<void>;
+
+  /**
+   * Revokes every temporary address whose `expiresAt` has passed, across all
+   * owners, the same way as `revoke`. Running it twice changes nothing more.
+   * @returns how many addresses were revoked.
+   */
+  abstract revokeExpired(now: Date): Promise<number>;
 }

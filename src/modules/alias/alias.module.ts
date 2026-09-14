@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { IdentityModule } from '../identity/identity.module.js';
+import { ExpireTemporaryAliasesJob } from './application/expire-temporary-aliases.job.js';
 import { CreateAliasHandler } from './application/create-alias.handler.js';
 import { ListAliasesHandler } from './application/list-aliases.handler.js';
 import { RevokeAliasHandler } from './application/revoke-alias.handler.js';
@@ -18,8 +19,11 @@ import { AliasController } from './presentation/alias.controller.js';
     CreateAliasHandler,
     UpdateAliasHandler,
     RevokeAliasHandler,
+    ExpireTemporaryAliasesJob,
     { provide: AliasRepository, useClass: PrismaAliasRepository },
     { provide: FolderDirectory, useClass: PrismaFolderDirectory },
   ],
+  /** Scheduled by the worker process, see worker.module.ts. */
+  exports: [ExpireTemporaryAliasesJob],
 })
 export class AliasModule {}

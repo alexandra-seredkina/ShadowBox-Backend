@@ -134,6 +134,22 @@ export class InMemoryAliasRepository
     return Promise.resolve();
   }
 
+  revokeExpired(now: Date): Promise<number> {
+    const expired = this.rows.filter(
+      (row) =>
+        row.kind === 'temporary' &&
+        row.status !== 'revoked' &&
+        row.expiresAt !== null &&
+        row.expiresAt <= now,
+    );
+    for (const row of expired) {
+      row.status = 'revoked';
+      row.encryptedLabel = null;
+      row.folderId = null;
+    }
+    return Promise.resolve(expired.length);
+  }
+
   findByKey(key: string, now: Date): Promise<StoredIdempotentResult | null> {
     const record = this.records.get(key);
     return Promise.resolve(
