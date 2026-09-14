@@ -27,14 +27,6 @@ export class PowInvalidError extends DomainError {
   }
 }
 
-/** Raised by the registrar when the generated alias already exists; the caller retries. */
-export class AliasAddressTakenError extends Error {
-  constructor() {
-    super('Generated alias address is already taken');
-    this.name = 'AliasAddressTakenError';
-  }
-}
-
 /** One answer for an unknown login and a wrong key alike. */
 export class InvalidCredentialsError extends DomainError {
   readonly code = 'INVALID_CREDENTIALS';

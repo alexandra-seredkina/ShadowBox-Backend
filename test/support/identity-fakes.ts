@@ -1,3 +1,4 @@
+import { AliasAddressTakenError } from '../../src/shared/kernel/alias-local-part.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { AccountKdfRepository } from '../../src/modules/identity/domain/account-kdf.repository.js';
 import { DecoySaltSource } from '../../src/modules/identity/domain/decoy-salt.source.js';
@@ -21,10 +22,7 @@ import type {
 import { AccountRepository } from '../../src/modules/identity/domain/account.repository.js';
 import { AccountRegistrar } from '../../src/modules/identity/domain/account-registrar.js';
 import { AuthKeyHasher } from '../../src/modules/identity/domain/auth-key-hasher.js';
-import {
-  AliasAddressTakenError,
-  LoginTakenError,
-} from '../../src/modules/identity/domain/identity.errors.js';
+import { LoginTakenError } from '../../src/modules/identity/domain/identity.errors.js';
 import {
   NewAccount,
   Registration,

@@ -124,7 +124,7 @@ describe('PrismaSessionRepository and PrismaAccountRepository', () => {
   });
 
   it('loads the account summary with its active address count', async () => {
-    await expect(accounts.loadSummary(accountId)).resolves.toMatchObject({
+    await expect(accounts.loadSummary(accountId, NOW)).resolves.toMatchObject({
       id: accountId,
       login: 'kage',
       isIpBindingEnabled: true,

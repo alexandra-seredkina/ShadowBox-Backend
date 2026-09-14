@@ -1,3 +1,4 @@
+import { AliasAddressTakenError } from '../../../shared/kernel/alias-local-part.js';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service.js';
@@ -9,10 +10,7 @@ import {
 import type { AccountId } from '../domain/account.js';
 import { AccountRegistrar } from '../domain/account-registrar.js';
 import type { AliasSummary } from '../domain/alias-summary.js';
-import {
-  AliasAddressTakenError,
-  LoginTakenError,
-} from '../domain/identity.errors.js';
+import { LoginTakenError } from '../domain/identity.errors.js';
 import type { Login } from '../domain/login.js';
 import {
   NewAccount,

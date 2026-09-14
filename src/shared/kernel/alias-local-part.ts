@@ -24,3 +24,11 @@ export function generateAliasLocalPart(random: SecureRandom): string {
   }
   return localPart;
 }
+
+/** Raised by a writer when a generated address already exists; the caller draws again. */
+export class AliasAddressTakenError extends Error {
+  constructor() {
+    super('Generated alias address is already taken');
+    this.name = 'AliasAddressTakenError';
+  }
+}

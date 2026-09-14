@@ -1,3 +1,4 @@
+import { AliasAddressTakenError } from '../../../shared/kernel/alias-local-part.js';
 import {
   createTestPrisma,
   resetDatabase,
@@ -8,10 +9,7 @@ import {
   IdempotencyClaim,
   IdempotencyKeyTakenError,
 } from '../../../shared/kernel/idempotency.js';
-import {
-  AliasAddressTakenError,
-  LoginTakenError,
-} from '../domain/identity.errors.js';
+import { LoginTakenError } from '../domain/identity.errors.js';
 import { standardKdfParams } from '../domain/kdf-params.js';
 import type { Login } from '../domain/login.js';
 import {

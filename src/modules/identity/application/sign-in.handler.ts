@@ -80,7 +80,7 @@ export class SignInHandler implements OnModuleInit {
     });
     await this.sessions.create(credentials.id, session.draft);
     const [account, keys] = await Promise.all([
-      this.accounts.loadSummary(credentials.id),
+      this.accounts.loadSummary(credentials.id, this.clock.now()),
       this.accounts.loadKeys(credentials.id),
     ]);
     return { account, keys, sessionToken: session.token };

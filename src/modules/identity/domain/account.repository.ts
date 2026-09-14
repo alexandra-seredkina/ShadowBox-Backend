@@ -15,8 +15,11 @@ export abstract class AccountRepository {
     login: Login,
   ): Promise<AccountCredentials | null>;
 
-  /** @throws Error when the account does not exist. */
-  abstract loadSummary(id: AccountId): Promise<AccountSummary>;
+  /**
+   * `now` decides which temporary addresses have expired and no longer count.
+   * @throws Error when the account does not exist.
+   */
+  abstract loadSummary(id: AccountId, now: Date): Promise<AccountSummary>;
 
   /** @throws Error when the account does not exist. */
   abstract loadKeys(id: AccountId): Promise<AccountKeys>;

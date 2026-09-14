@@ -23,8 +23,9 @@ export class LoadSessionStateHandler {
   ) {}
 
   async execute(session: AuthenticatedSession): Promise<SessionState> {
+    const now = this.clock.now();
     const [account, keys] = await Promise.all([
-      this.accounts.loadSummary(session.accountId),
+      this.accounts.loadSummary(session.accountId, now),
       this.accounts.loadKeys(session.accountId),
     ]);
     return {
@@ -32,7 +33,7 @@ export class LoadSessionStateHandler {
       keys,
       session: {
         id: session.sessionId,
-        reauthUntil: openReauthUntil(session, this.clock.now()),
+        reauthUntil: openReauthUntil(session, now),
       },
     };
   }

@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { AppConfig } from '../../../config/app-config.js';
 import { IdempotencyConflictError } from '../../../shared/errors/idempotency-conflict.error.js';
-import { generateAliasLocalPart } from '../../../shared/kernel/alias-local-part.js';
+import {
+  AliasAddressTakenError,
+  generateAliasLocalPart,
+} from '../../../shared/kernel/alias-local-part.js';
 import { Clock } from '../../../shared/kernel/clock.js';
 import {
   IDEMPOTENCY_TTL_MS,
@@ -16,10 +19,7 @@ import { AccountRepository } from '../domain/account.repository.js';
 import { AccountRegistrar } from '../domain/account-registrar.js';
 import { AuthKeyHasher } from '../domain/auth-key-hasher.js';
 import type { ClientContext } from '../domain/client-context.js';
-import {
-  AliasAddressTakenError,
-  LoginReservedError,
-} from '../domain/identity.errors.js';
+import { LoginReservedError } from '../domain/identity.errors.js';
 import { standardKdfParams } from '../domain/kdf-params.js';
 import { Login, parseLogin } from '../domain/login.js';
 import {

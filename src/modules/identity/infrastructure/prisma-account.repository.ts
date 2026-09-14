@@ -29,13 +29,19 @@ export class PrismaAccountRepository implements AccountRepository {
     return this.findCredentials({ login });
   }
 
-  async loadSummary(id: AccountId): Promise<AccountSummary> {
+  async loadSummary(id: AccountId, now: Date): Promise<AccountSummary> {
     const [account, activeAliases] = await Promise.all([
       this.prisma.account.findUniqueOrThrow({
         where: { id },
         select: { login: true, createdAt: true, isIpBindingEnabled: true },
       }),
-      this.prisma.alias.count({ where: { accountId: id, status: 'active' } }),
+      this.prisma.alias.count({
+        where: {
+          accountId: id,
+          status: 'active',
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
+      }),
     ]);
     return { ...account, id, login: account.login as Login, activeAliases };
   }
