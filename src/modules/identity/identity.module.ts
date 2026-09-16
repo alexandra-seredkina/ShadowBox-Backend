@@ -1,4 +1,10 @@
 import { Module } from '@nestjs/common';
+import { ChangeIpBindingHandler } from './application/change-ip-binding.handler.js';
+import { DeleteAccountHandler } from './application/delete-account.handler.js';
+import { EndOtherSessionsHandler } from './application/end-other-sessions.handler.js';
+import { EndOwnSessionHandler } from './application/end-own-session.handler.js';
+import { ListSessionsHandler } from './application/list-sessions.handler.js';
+import { LoadAccountHandler } from './application/load-account.handler.js';
 import { AuthenticateSessionHandler } from './application/authenticate-session.handler.js';
 import { EndSessionHandler } from './application/end-session.handler.js';
 import { IssuePowChallengeHandler } from './application/issue-pow-challenge.handler.js';
@@ -25,11 +31,15 @@ import { PrismaAccountRepository } from './infrastructure/prisma-account.reposit
 import { PrismaPowChallengeRepository } from './infrastructure/prisma-pow-challenge.repository.js';
 import { PrismaSessionRepository } from './infrastructure/prisma-session.repository.js';
 import { SodiumAuthKeyHasher } from './infrastructure/sodium-auth-key-hasher.js';
+import {
+  AccountController,
+  SessionsController,
+} from './presentation/account.controller.js';
 import { AuthController } from './presentation/auth.controller.js';
 import { SessionGuard } from './presentation/session.guard.js';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, AccountController, SessionsController],
   providers: [
     IssuePowChallengeHandler,
     LoadKdfParamsHandler,
@@ -39,6 +49,12 @@ import { SessionGuard } from './presentation/session.guard.js';
     LoadSessionStateHandler,
     ReauthenticateHandler,
     AuthenticateSessionHandler,
+    ListSessionsHandler,
+    EndOwnSessionHandler,
+    EndOtherSessionsHandler,
+    LoadAccountHandler,
+    ChangeIpBindingHandler,
+    DeleteAccountHandler,
     SessionGuard,
     PowVerifier,
     SessionIssuer,

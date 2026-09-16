@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../../../generated/prisma/client.js';
+import { Prisma } from '../../../generated/prisma/client.js';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service.js';
 import type {
   AccountCredentials,
@@ -8,7 +8,9 @@ import type {
   AccountSummary,
 } from '../domain/account.js';
 import { AccountRepository } from '../domain/account.repository.js';
+import type { IpHash } from '../../../shared/kernel/ip-hasher.js';
 import type { Login } from '../domain/login.js';
+import type { SessionId } from '../domain/session.js';
 import { KDF_FIELDS, toKdfParams } from './kdf-row.js';
 
 const CREDENTIAL_FIELDS = {
@@ -72,6 +74,57 @@ export class PrismaAccountRepository implements AccountRepository {
       data: { authKeyHash },
       select: { id: true },
     });
+  }
+
+  async changeIpBinding(change: {
+    readonly accountId: AccountId;
+    readonly isEnabled: boolean;
+    readonly currentSession: SessionId;
+    readonly currentIp: IpHash;
+  }): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.account.update({
+        where: { id: change.accountId },
+        data: { isIpBindingEnabled: change.isEnabled },
+        select: { id: true },
+      }),
+      this.prisma.session.updateMany({
+        where: { accountId: change.accountId },
+        data: { isIpBound: change.isEnabled },
+      }),
+      ...(change.isEnabled
+        ? [
+            this.prisma.session.updateMany({
+              where: { id: change.currentSession, accountId: change.accountId },
+              data: {
+                ipHash: Uint8Array.from(change.currentIp.hash),
+                ipHashKeyVersion: change.currentIp.keyVersion,
+              },
+            }),
+          ]
+        : []),
+    ]);
+  }
+
+  async delete(id: AccountId, now: Date): Promise<void> {
+    await this.prisma.$transaction([
+      // The alias rows outlive the account (account_id becomes NULL), so an
+      // address is never issued again.
+      this.prisma.alias.updateMany({
+        where: { accountId: id, status: { not: 'revoked' } },
+        data: {
+          status: 'revoked',
+          revokedAt: now,
+          encryptedLabel: Prisma.DbNull,
+          folderId: null,
+        },
+      }),
+      this.prisma.alias.updateMany({
+        where: { accountId: id },
+        data: { encryptedLabel: Prisma.DbNull, folderId: null },
+      }),
+      this.prisma.account.delete({ where: { id }, select: { id: true } }),
+    ]);
   }
 
   private async findCredentials(

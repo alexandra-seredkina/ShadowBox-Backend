@@ -29,9 +29,11 @@ import {
   RegistrationResult,
   toRegistrationSnapshot,
 } from '../../src/modules/identity/domain/registration.js';
-import type {
+import {
+  isSessionExpired,
   SessionDraft,
   SessionId,
+  SessionListing,
   StoredSession,
 } from '../../src/modules/identity/domain/session.js';
 import { SessionRepository } from '../../src/modules/identity/domain/session.repository.js';
@@ -88,6 +90,8 @@ export class InMemorySessionRepository implements SessionRepository {
     SessionId,
     { -readonly [K in keyof StoredSession]: StoredSession[K] } & {
       tokenHash: Uint8Array;
+      device: string;
+      createdAt: Date;
     }
   >();
 
@@ -108,6 +112,8 @@ export class InMemorySessionRepository implements SessionRepository {
       id,
       accountId,
       tokenHash: draft.tokenHash,
+      device: draft.device,
+      createdAt: this.now(),
       ip: draft.ip,
       isIpBound: draft.isIpBound,
       reauthUntil: null,
@@ -161,6 +167,45 @@ export class InMemorySessionRepository implements SessionRepository {
   deleteByTokenHash(tokenHash: Uint8Array): Promise<void> {
     for (const [id, session] of this.sessions) {
       if (Buffer.from(session.tokenHash).equals(tokenHash)) {
+        this.sessions.delete(id);
+      }
+    }
+    return Promise.resolve();
+  }
+
+  listLive(accountId: AccountId, now: Date): Promise<SessionListing[]> {
+    const live = [...this.sessions.values()]
+      .filter(
+        (session) =>
+          session.accountId === accountId && !isSessionExpired(session, now),
+      )
+      .sort((a, b) => b.lastActiveAt.getTime() - a.lastActiveAt.getTime())
+      .map(({ id, device, isIpBound, createdAt, lastActiveAt }) => ({
+        id,
+        device,
+        isIpBound,
+        createdAt,
+        lastActiveAt,
+      }));
+    return Promise.resolve(live);
+  }
+
+  deleteOwn(accountId: AccountId, id: SessionId, now: Date): Promise<boolean> {
+    const session = this.sessions.get(id);
+    if (
+      session === undefined ||
+      session.accountId !== accountId ||
+      isSessionExpired(session, now)
+    ) {
+      return Promise.resolve(false);
+    }
+    this.sessions.delete(id);
+    return Promise.resolve(true);
+  }
+
+  deleteAllExcept(accountId: AccountId, keep: SessionId): Promise<void> {
+    for (const [id, session] of this.sessions) {
+      if (session.accountId === accountId && id !== keep) {
         this.sessions.delete(id);
       }
     }
@@ -290,6 +335,35 @@ export class InMemoryAccountStore
     return Promise.resolve(
       record === undefined || record.expiresAt <= now ? null : record,
     );
+  }
+
+  changeIpBinding(change: {
+    readonly accountId: AccountId;
+    readonly isEnabled: boolean;
+    readonly currentSession: SessionId;
+    readonly currentIp: IpHash;
+  }): Promise<void> {
+    this.require(change.accountId).isIpBindingEnabled = change.isEnabled;
+    for (const session of this.sessionStore.sessions.values()) {
+      if (session.accountId === change.accountId) {
+        session.isIpBound = change.isEnabled;
+        if (change.isEnabled && session.id === change.currentSession) {
+          session.ip = change.currentIp;
+        }
+      }
+    }
+    return Promise.resolve();
+  }
+
+  delete(id: AccountId): Promise<void> {
+    this.require(id);
+    this.accounts.delete(id);
+    for (const [sessionId, session] of this.sessionStore.sessions) {
+      if (session.accountId === id) {
+        this.sessionStore.sessions.delete(sessionId);
+      }
+    }
+    return Promise.resolve();
   }
 
   private require(id: AccountId): StoredAccount {

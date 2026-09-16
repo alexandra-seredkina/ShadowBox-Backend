@@ -1,6 +1,11 @@
 import type { IpHash } from '../../../shared/kernel/ip-hasher.js';
 import type { AccountId } from './account.js';
-import type { SessionDraft, SessionId, StoredSession } from './session.js';
+import type {
+  SessionDraft,
+  SessionId,
+  SessionListing,
+  StoredSession,
+} from './session.js';
 
 export abstract class SessionRepository {
   abstract create(
@@ -27,4 +32,19 @@ export abstract class SessionRepository {
 
   /** No-op when the token is unknown. */
   abstract deleteByTokenHash(tokenHash: Uint8Array): Promise<void>;
+
+  /** Sessions of the account that have not expired yet, most recently used first. */
+  abstract listLive(accountId: AccountId, now: Date): Promise<SessionListing[]>;
+
+  /** @returns false when the session is not the account's or has expired. */
+  abstract deleteOwn(
+    accountId: AccountId,
+    id: SessionId,
+    now: Date,
+  ): Promise<boolean>;
+
+  abstract deleteAllExcept(
+    accountId: AccountId,
+    keep: SessionId,
+  ): Promise<void>;
 }

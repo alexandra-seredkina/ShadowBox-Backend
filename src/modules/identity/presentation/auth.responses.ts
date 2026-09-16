@@ -13,6 +13,7 @@ import type { KdfParams } from '../domain/kdf-params.js';
 import type { PowChallenge } from '../domain/pow-challenge.js';
 import type { RegistrationResult } from '../domain/registration.js';
 import type { SessionState } from '../application/load-session-state.handler.js';
+import type { ListedSession } from '../application/list-sessions.handler.js';
 import type { SignInOutcome } from '../application/sign-in.handler.js';
 
 export interface PowChallengeResponse {
@@ -169,5 +170,25 @@ export function toSessionStateResponse(
       id: state.session.id,
       reauthUntil: reauthUntil === null ? null : toApiInstant(reauthUntil),
     },
+  };
+}
+
+export interface SessionResponse {
+  readonly id: string;
+  readonly isCurrent: boolean;
+  readonly device: string;
+  readonly createdAt: string;
+  readonly lastActiveAt: string;
+  readonly isIpBound: boolean;
+}
+
+export function toSessionResponse(session: ListedSession): SessionResponse {
+  return {
+    id: session.id,
+    isCurrent: session.isCurrent,
+    device: session.device,
+    createdAt: toApiDate(session.createdAt),
+    lastActiveAt: toApiDate(session.lastActiveAt),
+    isIpBound: session.isIpBound,
   };
 }

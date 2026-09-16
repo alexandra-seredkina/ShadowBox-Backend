@@ -2,13 +2,25 @@ import { Injectable } from '@nestjs/common';
 import type { IpHash } from '../../../shared/kernel/ip-hasher.js';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service.js';
 import type { AccountId } from '../domain/account.js';
-import type {
+import type { Prisma } from '../../../generated/prisma/client.js';
+import {
+  SESSION_IDLE_TTL_MS,
   SessionDraft,
   SessionId,
+  SessionListing,
   StoredSession,
 } from '../domain/session.js';
 import { SessionRepository } from '../domain/session.repository.js';
 import { toSessionData } from './session-data.js';
+
+/** Mirrors isSessionExpired: within the absolute lifetime and the idle timeout. */
+function liveWhere(accountId: AccountId, now: Date): Prisma.SessionWhereInput {
+  return {
+    accountId,
+    expiresAt: { gt: now },
+    lastActiveAt: { gt: new Date(now.getTime() - SESSION_IDLE_TTL_MS) },
+  };
+}
 
 @Injectable()
 export class PrismaSessionRepository implements SessionRepository {
@@ -86,6 +98,38 @@ export class PrismaSessionRepository implements SessionRepository {
   async deleteByTokenHash(tokenHash: Uint8Array): Promise<void> {
     await this.prisma.session.deleteMany({
       where: { tokenHash: Uint8Array.from(tokenHash) },
+    });
+  }
+
+  async listLive(accountId: AccountId, now: Date): Promise<SessionListing[]> {
+    const rows = await this.prisma.session.findMany({
+      where: liveWhere(accountId, now),
+      select: {
+        id: true,
+        device: true,
+        isIpBound: true,
+        createdAt: true,
+        lastActiveAt: true,
+      },
+      orderBy: [{ lastActiveAt: 'desc' }, { id: 'desc' }],
+    });
+    return rows.map((row) => ({ ...row, id: row.id as SessionId }));
+  }
+
+  async deleteOwn(
+    accountId: AccountId,
+    id: SessionId,
+    now: Date,
+  ): Promise<boolean> {
+    const { count } = await this.prisma.session.deleteMany({
+      where: { ...liveWhere(accountId, now), id },
+    });
+    return count > 0;
+  }
+
+  async deleteAllExcept(accountId: AccountId, keep: SessionId): Promise<void> {
+    await this.prisma.session.deleteMany({
+      where: { accountId, id: { not: keep } },
     });
   }
 }

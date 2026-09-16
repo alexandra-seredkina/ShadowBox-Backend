@@ -57,6 +57,15 @@ export interface StoredSession {
   readonly expiresAt: Date;
 }
 
+/** A session as its owner sees it in the list of devices. */
+export interface SessionListing {
+  readonly id: SessionId;
+  readonly device: string;
+  readonly isIpBound: boolean;
+  readonly createdAt: Date;
+  readonly lastActiveAt: Date;
+}
+
 /** The cookie value as bytes, or null for anything that cannot be a token. */
 export function parseSessionToken(raw: string | null): Uint8Array | null {
   if (raw === null || !SESSION_TOKEN_PATTERN.test(raw)) {
