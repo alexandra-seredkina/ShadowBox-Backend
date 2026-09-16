@@ -4,41 +4,22 @@ import { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import type { PrismaService } from '../src/infrastructure/prisma/prisma.service.js';
 import { createTestApp } from './support/create-test-app.js';
-import { solvePow } from './support/pow.js';
-import { TEST_ALLOWED_ORIGIN } from './support/test-config.js';
+import {
+  callAs,
+  cookieOf,
+  encoded,
+  LOOPBACK_PROXIES,
+  metadataBlob,
+  registerUser,
+  TEST_AUTH_KEY,
+  TestUser,
+} from './support/http-users.js';
 import { createTestPrisma, resetDatabase } from './support/test-database.js';
 
-const LOOPBACK = ['127.0.0.1', '::ffff:127.0.0.1', '::1'];
-const AUTH_KEY = Buffer.alloc(32, 1).toString('base64url');
+const AUTH_KEY = TEST_AUTH_KEY;
 const IDEMPOTENCY_KEY = '0192c5a0-7d2e-7b3a-8c4d-5e6f7a8b9c0d';
-
-function encoded(length: number, fill: number): string {
-  return Buffer.alloc(length, fill).toString('base64url');
-}
-
-const LABEL = {
-  v: 1,
-  alg: 'x25519-xchacha20poly1305',
-  sealedKey: encoded(80, 1),
-  nonce: encoded(24, 2),
-  ciphertext: encoded(40, 3),
-};
-
-interface User {
-  readonly cookie: string;
-  readonly ip: string;
-  readonly inboxId: string;
-}
-
-function cookieOf(response: request.Response): string {
-  const match = /^(__Host-sb_session=[^;]+)/.exec(
-    String(response.headers['set-cookie'] ?? ''),
-  );
-  if (match?.[1] === undefined) {
-    throw new Error('Response sets no session cookie');
-  }
-  return match[1];
-}
+const LABEL = metadataBlob();
+type User = TestUser;
 
 describe('Aliases (e2e on PostgreSQL)', () => {
   let prisma: PrismaService;
@@ -52,58 +33,11 @@ describe('Aliases (e2e on PostgreSQL)', () => {
     path: string,
     user: User | null,
   ): request.Test {
-    const test = request(server)
-      [method](`/api/v1/${path}`)
-      .set('Origin', TEST_ALLOWED_ORIGIN)
-      .set('X-Forwarded-For', user?.ip ?? '198.51.100.250');
-    return user === null ? test : test.set('Cookie', user.cookie);
+    return callAs(server, method, path, user);
   }
 
-  async function register(login: string, ip: string): Promise<User> {
-    const challenge = await request(server)
-      .post('/api/v1/auth/pow')
-      .set('Origin', TEST_ALLOWED_ORIGIN)
-      .set('X-Forwarded-For', ip)
-      .send({ purpose: 'register' })
-      .expect(200);
-    const response = await request(server)
-      .post('/api/v1/auth/register')
-      .set('Origin', TEST_ALLOWED_ORIGIN)
-      .set('X-Forwarded-For', ip)
-      .send({
-        login,
-        authKey: AUTH_KEY,
-        kdf: {
-          algorithm: 'argon2id13',
-          salt: encoded(16, 2),
-          opsLimit: 3,
-          memLimitBytes: 67108864,
-        },
-        keys: {
-          publicKey: encoded(32, 3),
-          encryptedPrivateKey: {
-            nonce: encoded(24, 4),
-            ciphertext: encoded(48, 5),
-          },
-          recoveryEncryptedPrivateKey: {
-            nonce: encoded(24, 6),
-            ciphertext: encoded(48, 7),
-          },
-        },
-        pow: {
-          challengeId: challenge.body.challengeId,
-          nonce: solvePow(
-            Buffer.from(challenge.body.prefix, 'base64url'),
-            challenge.body.difficulty,
-          ),
-        },
-      })
-      .expect(201);
-    const inbox = await prisma.folder.findFirstOrThrow({
-      where: { account: { login }, systemRole: 'inbox' },
-      select: { id: true },
-    });
-    return { cookie: cookieOf(response), ip, inboxId: inbox.id };
+  function register(login: string, ip: string): Promise<User> {
+    return registerUser({ server, prisma, login, ip });
   }
 
   function createTemporary(
@@ -126,7 +60,7 @@ describe('Aliases (e2e on PostgreSQL)', () => {
       rootModule: AppModule,
       prisma,
       useDatabaseCounters: true,
-      config: { trustedProxies: LOOPBACK },
+      config: { trustedProxies: LOOPBACK_PROXIES },
     });
     server = app.getHttpServer();
     kage = await register('kage', '203.0.113.1');
