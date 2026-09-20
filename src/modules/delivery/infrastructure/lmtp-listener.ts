@@ -10,6 +10,16 @@ import {
 } from 'smtp-server';
 import { AppConfig } from '../../../config/app-config.js';
 import { MAX_MESSAGE_BYTES } from '../../../shared/kernel/message-size.js';
+import type {
+  InboundMail,
+  MailEnvelope,
+  MessageAliasId,
+  MessageOwnerId,
+} from '../../message/message.api.js';
+import {
+  AnalyzeInboundMailHandler,
+  DeliverInboundMailHandler,
+} from '../../message/message.api.js';
 import { CheckRecipientHandler } from '../application/check-recipient.handler.js';
 import { MAX_RECIPIENTS_PER_MESSAGE, Recipient } from '../domain/recipient.js';
 
@@ -43,6 +53,8 @@ export const TEMPORARY_FAILURE = new LmtpReply(
   451,
   '4.3.0 Temporary failure, try again later',
 );
+/** smtp-server puts 250 in front of it. */
+export const DELIVERED = '2.0.0 Delivered';
 
 type LmtpDataCallback = (
   error: Error | null,
@@ -65,6 +77,8 @@ export class LmtpListener implements OnApplicationShutdown {
   constructor(
     private readonly config: AppConfig,
     private readonly checkRecipient: CheckRecipientHandler,
+    private readonly analyzeInbound: AnalyzeInboundMailHandler,
+    private readonly deliverInbound: DeliverInboundMailHandler,
     private readonly logger: PinoLogger,
   ) {
     logger.setContext(LmtpListener.name);
@@ -78,6 +92,8 @@ export class LmtpListener implements OnApplicationShutdown {
       authOptional: true,
       disabledCommands: ['AUTH', 'STARTTLS'],
       useXForward: true,
+      /** The peer is our own MTA; the sender's host comes with XFORWARD. */
+      disableReverseLookup: true,
       maxClients: MAX_CLIENTS,
       logger: false,
       onRcptTo: (address, session, callback) => {
@@ -143,14 +159,59 @@ export class LmtpListener implements OnApplicationShutdown {
           callback(MESSAGE_TOO_BIG);
           return;
         }
-        raw.fill(0);
-        callback(
-          null,
-          session.envelope.rcptTo.map(() => TEMPORARY_FAILURE),
-        );
+        this.deliver(raw, session)
+          .then(
+            (replies) => callback(null, replies),
+            (error: unknown) => callback(this.toReply(error)),
+          )
+          .finally(() => raw.fill(0));
       },
       (error: unknown) => callback(this.toReply(error)),
     );
+  }
+
+  /**
+   * LMTP answers once per accepted recipient, in RCPT order, so a failure
+   * for one address defers only that copy. Recipients are handled one by
+   * one: each copy holds a sealed body as large as the message.
+   */
+  private async deliver(
+    raw: Uint8Array,
+    session: SMTPServerSession,
+  ): Promise<Array<string | LmtpReply>> {
+    const mail = await this.analyzeInbound.execute({
+      raw,
+      envelope: envelopeOf(session),
+    });
+    const accepted = this.acceptedIn(session.envelope);
+    const replies: Array<string | LmtpReply> = [];
+    for (const address of session.envelope.rcptTo) {
+      const recipient = accepted.get(address.address.toLowerCase());
+      replies.push(
+        recipient === undefined
+          ? TEMPORARY_FAILURE
+          : await this.deliverTo(mail, recipient),
+      );
+    }
+    return replies;
+  }
+
+  private async deliverTo(
+    mail: InboundMail,
+    recipient: Recipient,
+  ): Promise<string | LmtpReply> {
+    try {
+      await this.deliverInbound.execute({
+        mail,
+        recipient: {
+          ownerId: recipient.accountId as string as MessageOwnerId,
+          aliasId: recipient.aliasId as string as MessageAliasId,
+        },
+      });
+      return DELIVERED;
+    } catch (error: unknown) {
+      return this.toReply(error);
+    }
   }
 
   private acceptedIn(envelope: SMTPServerEnvelope): Map<string, Recipient> {
@@ -170,6 +231,27 @@ export class LmtpListener implements OnApplicationShutdown {
     this.logger.error({ err: error }, 'LMTP transaction failed');
     return TEMPORARY_FAILURE;
   }
+}
+
+/**
+ * smtp-server keeps XFORWARD data in a Map it does not type, and copies it to
+ * remoteAddress and hostNameAppearsAs only when the next transaction starts.
+ */
+function forwarded(session: SMTPServerSession, key: string): string | null {
+  const values: unknown = Reflect.get(session, 'xForward');
+  const value: unknown = values instanceof Map ? values.get(key) : undefined;
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
+/** The sender as the MTA saw it, so that SPF checks the real client. */
+function envelopeOf(session: SMTPServerSession): MailEnvelope {
+  const mailFrom = session.envelope.mailFrom;
+  return {
+    clientIp: forwarded(session, 'ADDR') ?? session.remoteAddress,
+    helo: forwarded(session, 'HELO') ?? session.hostNameAppearsAs,
+    mailFrom:
+      mailFrom === false || mailFrom.address === '' ? null : mailFrom.address,
+  };
 }
 
 /**

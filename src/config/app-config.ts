@@ -21,6 +21,9 @@ export interface AppConfigValues {
   readonly ipHashKeyVersion: number;
   /** Version ipHashKeyVersion - 1; null when no rotation is in progress. */
   readonly ipHashPreviousKey: Uint8Array | null;
+  /** HMAC key for senders an account has had mail from; the version is stored next to every hash. */
+  readonly senderHashKey: Uint8Array;
+  readonly senderHashKeyVersion: number;
   readonly trustedProxies: readonly string[];
   readonly lmtpHost: string;
   readonly lmtpPort: number;
@@ -38,6 +41,8 @@ export class AppConfig implements AppConfigValues {
   readonly ipHashKey: Uint8Array;
   readonly ipHashKeyVersion: number;
   readonly ipHashPreviousKey: Uint8Array | null;
+  readonly senderHashKey: Uint8Array;
+  readonly senderHashKeyVersion: number;
   readonly trustedProxies: readonly string[];
   readonly lmtpHost: string;
   readonly lmtpPort: number;
@@ -54,6 +59,8 @@ export class AppConfig implements AppConfigValues {
     this.ipHashKey = values.ipHashKey;
     this.ipHashKeyVersion = values.ipHashKeyVersion;
     this.ipHashPreviousKey = values.ipHashPreviousKey;
+    this.senderHashKey = values.senderHashKey;
+    this.senderHashKeyVersion = values.senderHashKeyVersion;
     this.trustedProxies = values.trustedProxies;
     this.lmtpHost = values.lmtpHost;
     this.lmtpPort = values.lmtpPort;
@@ -87,6 +94,8 @@ export function loadConfig(
     ipHashKey: result.data.IP_HASH_KEY,
     ipHashKeyVersion: result.data.IP_HASH_KEY_VERSION,
     ipHashPreviousKey: result.data.IP_HASH_PREVIOUS_KEY ?? null,
+    senderHashKey: result.data.SENDER_HASH_KEY,
+    senderHashKeyVersion: result.data.SENDER_HASH_KEY_VERSION,
     trustedProxies: result.data.TRUSTED_PROXIES,
     lmtpHost: result.data.LMTP_HOST,
     lmtpPort: result.data.LMTP_PORT,

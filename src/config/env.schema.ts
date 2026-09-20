@@ -71,6 +71,14 @@ export const envSchema = z.object({
     (value) => (value === '' ? undefined : value),
     secretKeySchema.optional(),
   ),
+  /** HMAC key that hides senders in known_senders; stored hashes carry its version. */
+  SENDER_HASH_KEY: secretKeySchema,
+  SENDER_HASH_KEY_VERSION: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(32_767)
+    .default(1),
   TRUSTED_PROXIES: proxyListSchema,
   /** Where the delivery process takes mail from the MTA; never a public interface. */
   LMTP_HOST: z

@@ -7,6 +7,7 @@ const validEnv = {
   PRELOGIN_SALT_KEY: Buffer.alloc(32, 7).toString('base64url'),
   MAIL_DOMAIN: 'shadowbox.test',
   IP_HASH_KEY: Buffer.alloc(32, 8).toString('base64url'),
+  SENDER_HASH_KEY: Buffer.alloc(32, 9).toString('base64url'),
 };
 
 describe('loadConfig', () => {
@@ -26,6 +27,7 @@ describe('loadConfig', () => {
     expect(config.powDifficulty).toBe(20);
     expect(config.ipHashKeyVersion).toBe(1);
     expect(config.ipHashPreviousKey).toBeNull();
+    expect(config.senderHashKeyVersion).toBe(1);
     expect(config.trustedProxies).toEqual([]);
     expect(config.lmtpHost).toBe('127.0.0.1');
     expect(config.lmtpPort).toBe(2424);
@@ -131,6 +133,18 @@ describe('loadConfig', () => {
       );
     },
   );
+
+  it('requires a sender hash key of at least 32 bytes', () => {
+    const { SENDER_HASH_KEY: _omitted, ...withoutKey } = validEnv;
+
+    expect(() => loadConfig(withoutKey)).toThrow(ConfigValidationError);
+    expect(() =>
+      loadConfig({
+        ...validEnv,
+        SENDER_HASH_KEY: Buffer.alloc(16, 9).toString('base64url'),
+      }),
+    ).toThrow(ConfigValidationError);
+  });
 
   it('treats an empty previous IP key as absent', () => {
     expect(

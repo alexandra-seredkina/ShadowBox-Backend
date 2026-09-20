@@ -1,15 +1,29 @@
 import { Readable } from 'node:stream';
 import type { PinoLogger } from 'nestjs-pino';
 import { InMemoryRecipientDirectory } from '../../../../test/support/delivery-fakes.js';
-import { FixedClock } from '../../../../test/support/kernel-fakes.js';
+import {
+  FixedClock,
+  SequentialRandom,
+} from '../../../../test/support/kernel-fakes.js';
 import { LmtpTestClient } from '../../../../test/support/lmtp-test-client.js';
+import {
+  FixedMailAuthenticator,
+  FixedMailParser,
+  InMemoryInboundMailStore,
+  PlainSenderHasher,
+} from '../../../../test/support/message-fakes.js';
 import { createTestConfig } from '../../../../test/support/test-config.js';
+import { AnalyzeInboundMailHandler } from '../../message/application/analyze-inbound-mail.handler.js';
+import { DeliverInboundMailHandler } from '../../message/application/deliver-inbound-mail.handler.js';
+import { SodiumContentSealer } from '../../message/infrastructure/sodium-content-sealer.js';
 import { CheckRecipientHandler } from '../application/check-recipient.handler.js';
 import { MAX_RECIPIENTS_PER_MESSAGE } from '../domain/recipient.js';
 import { LmtpListener, readLimited } from './lmtp-listener.js';
 
 const NOW = new Date('2020-01-15T12:00:00Z');
 const KNOWN = 'k7f3mz9q2a@shadowbox.test';
+const SECOND = 'b2c3d4e5f6@shadowbox.test';
+const PUBLIC_KEY = new Uint8Array(32).fill(9);
 
 function silentLogger(): PinoLogger {
   return {
@@ -21,16 +35,31 @@ function silentLogger(): PinoLogger {
 
 describe('LmtpListener', () => {
   let directory: InMemoryRecipientDirectory;
+  let store: InMemoryInboundMailStore;
+  let authenticator: FixedMailAuthenticator;
   let listener: LmtpListener;
   let client: LmtpTestClient;
 
   beforeEach(async () => {
     directory = new InMemoryRecipientDirectory();
-    directory.add('k7f3mz9q2a');
+    store = new InMemoryInboundMailStore();
+    for (const localPart of ['k7f3mz9q2a', 'b2c3d4e5f6']) {
+      const recipient = directory.add(localPart);
+      store.addMailbox(recipient.accountId, recipient.aliasId, PUBLIC_KEY);
+    }
+    authenticator = new FixedMailAuthenticator();
     const config = createTestConfig({ lmtpPort: 0 });
+    const clock = new FixedClock(NOW);
     listener = new LmtpListener(
       config,
-      new CheckRecipientHandler(directory, config, new FixedClock(NOW)),
+      new CheckRecipientHandler(directory, config, clock),
+      new AnalyzeInboundMailHandler(new FixedMailParser(), authenticator),
+      new DeliverInboundMailHandler(
+        store,
+        new SodiumContentSealer(new SequentialRandom()),
+        new PlainSenderHasher(),
+        clock,
+      ),
       silentLogger(),
     );
     const { port } = await listener.listen();
@@ -106,15 +135,62 @@ describe('LmtpListener', () => {
     expect(reply.code).toBe(552);
   });
 
-  it('defers accepted mail per recipient until it can be processed', async () => {
-    await client.envelope([KNOWN]);
+  it('delivers accepted mail and confirms each recipient', async () => {
+    await client.envelope([KNOWN, SECOND]);
     await client.command('DATA');
 
-    const replies = await client.data('Subject: hi\r\n\r\nhello\r\n', 1);
+    const replies = await client.data('Subject: hi\r\n\r\nhello\r\n', 2);
+
+    expect(replies).toEqual([
+      { code: 250, text: '2.0.0 Delivered' },
+      { code: 250, text: '2.0.0 Delivered' },
+    ]);
+    expect(store.saved.map((message) => message.aliasId)).toEqual([
+      'alias-k7f3mz9q2a',
+      'alias-b2c3d4e5f6',
+    ]);
+  });
+
+  it('defers only the recipient whose copy could not be stored', async () => {
+    store.failingAliasId = 'alias-k7f3mz9q2a';
+    await client.envelope([KNOWN, SECOND]);
+    await client.command('DATA');
+
+    const replies = await client.data('Subject: hi\r\n\r\nhello\r\n', 2);
 
     expect(replies).toEqual([
       { code: 451, text: '4.3.0 Temporary failure, try again later' },
+      { code: 250, text: '2.0.0 Delivered' },
     ]);
+  });
+
+  it('checks the sender with the client data forwarded by the MTA', async () => {
+    await client.command('LHLO mta.example');
+    await client.command(
+      'XFORWARD ADDR=192.0.2.10 NAME=mail.example.com HELO=Mail.Example.com',
+    );
+    await client.command('MAIL FROM:<news@example.com>');
+    await client.command(`RCPT TO:<${KNOWN}>`);
+    await client.command('DATA');
+
+    await client.data('Subject: hi\r\n\r\nhello\r\n', 1);
+
+    expect(authenticator.lastEnvelope).toEqual({
+      clientIp: '192.0.2.10',
+      helo: 'mail.example.com',
+      mailFrom: 'news@example.com',
+    });
+  });
+
+  it('passes a bounce on without a sender address', async () => {
+    await client.command('LHLO mta.example');
+    await client.command('MAIL FROM:<>');
+    await client.command(`RCPT TO:<${KNOWN}>`);
+    await client.command('DATA');
+
+    await client.data('Subject: bounce\r\n\r\nundelivered\r\n', 1);
+
+    expect(authenticator.lastEnvelope?.mailFrom).toBeNull();
   });
 });
 

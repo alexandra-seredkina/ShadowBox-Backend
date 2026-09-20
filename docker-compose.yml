@@ -30,6 +30,9 @@ services:
       IP_HASH_KEY: ${IP_HASH_KEY:?set IP_HASH_KEY in .env}
       IP_HASH_KEY_VERSION: ${IP_HASH_KEY_VERSION:-1}
       IP_HASH_PREVIOUS_KEY: ${IP_HASH_PREVIOUS_KEY:-}
+      SENDER_HASH_KEY: ${SENDER_HASH_KEY:?set SENDER_HASH_KEY in .env}
+      SENDER_HASH_KEY_VERSION: ${SENDER_HASH_KEY_VERSION:-1}
+      REGISTER_RATE_LIMIT_PER_HOUR: ${REGISTER_RATE_LIMIT_PER_HOUR:-3}
       # Only nginx may tell the backend who the client is
       TRUSTED_PROXIES: 172.28.10.10
     volumes: &backend-volumes

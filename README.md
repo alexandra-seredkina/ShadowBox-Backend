@@ -207,7 +207,7 @@ ShadowBox/
 ```
 
 ```bash
-cp .env.example .env    # set your own POSTGRES_PASSWORD, PRELOGIN_SALT_KEY and IP_HASH_KEY
+cp .env.example .env    # set your own POSTGRES_PASSWORD, PRELOGIN_SALT_KEY, IP_HASH_KEY and SENDER_HASH_KEY
 docker compose up --build
 ```
 

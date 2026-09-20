@@ -16,9 +16,12 @@ export function createTestConfig(
     ipHashKey: new Uint8Array(32).fill(43),
     ipHashKeyVersion: 1,
     ipHashPreviousKey: null,
+    senderHashKey: new Uint8Array(32).fill(44),
+    senderHashKeyVersion: 1,
     trustedProxies: [],
     lmtpHost: '127.0.0.1',
     lmtpPort: 2424,
+    registerRateLimitPerHour: 3,
     ...overrides,
   });
 }
