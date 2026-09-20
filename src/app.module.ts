@@ -9,7 +9,6 @@ import { RateLimitGuard } from './infrastructure/http/rate-limit.guard.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
 import { PrismaModule } from './infrastructure/prisma/prisma.module.js';
 import { AliasModule } from './modules/alias/alias.module.js';
-import { DeliveryModule } from './modules/delivery/delivery.module.js';
 import { FolderModule } from './modules/folder/folder.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { MessageModule } from './modules/message/message.module.js';
@@ -28,7 +27,6 @@ import { ApiExceptionFilter } from './shared/errors/api-exception.filter.js';
     FolderModule,
     MessageModule,
     ThreatModule,
-    DeliveryModule,
   ],
   controllers: [HealthController],
   providers: [

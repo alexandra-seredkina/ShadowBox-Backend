@@ -17,6 +17,8 @@ export function createTestConfig(
     ipHashKeyVersion: 1,
     ipHashPreviousKey: null,
     trustedProxies: [],
+    lmtpHost: '127.0.0.1',
+    lmtpPort: 2424,
     ...overrides,
   });
 }

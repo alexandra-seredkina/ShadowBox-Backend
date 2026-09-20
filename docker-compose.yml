@@ -59,6 +59,23 @@ services:
       backend:
         condition: service_healthy
 
+  # Mail intake: takes mail over LMTP and keeps it in memory only until it
+  # is encrypted. The port is for local tools; in production only the MTA
+  # on the internal network may reach it.
+  delivery:
+    build: *backend-build
+    environment:
+      <<: *backend-env
+      LMTP_HOST: 0.0.0.0
+      LMTP_PORT: 2424
+    volumes: *backend-volumes
+    command: ['npm', 'run', 'start:delivery']
+    ports:
+      - '127.0.0.1:${LMTP_HOST_PORT:-2424}:2424'
+    depends_on:
+      backend:
+        condition: service_healthy
+
   frontend:
     build:
       context: ../ShadowBox-Frontend

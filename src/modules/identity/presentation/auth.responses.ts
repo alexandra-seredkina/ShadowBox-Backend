@@ -3,11 +3,9 @@ import {
   toApiInstant,
   toBase64Url,
 } from '../../../shared/http/api-format.js';
+import { MAX_MESSAGE_BYTES } from '../../../shared/kernel/message-size.js';
 import type { AccountKeys, AccountSummary } from '../domain/account.js';
-import {
-  MAX_ACTIVE_ALIASES_PER_ACCOUNT,
-  MAX_MESSAGE_BYTES,
-} from '../domain/account-limits.js';
+import { MAX_ACTIVE_ALIASES_PER_ACCOUNT } from '../domain/account-limits.js';
 import type { AliasSummary } from '../domain/alias-summary.js';
 import type { KdfParams } from '../domain/kdf-params.js';
 import type { PowChallenge } from '../domain/pow-challenge.js';

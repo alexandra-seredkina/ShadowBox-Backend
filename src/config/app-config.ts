@@ -22,6 +22,9 @@ export interface AppConfigValues {
   /** Version ipHashKeyVersion - 1; null when no rotation is in progress. */
   readonly ipHashPreviousKey: Uint8Array | null;
   readonly trustedProxies: readonly string[];
+  readonly lmtpHost: string;
+  readonly lmtpPort: number;
+  readonly registerRateLimitPerHour: number;
 }
 
 export class AppConfig implements AppConfigValues {
@@ -36,6 +39,9 @@ export class AppConfig implements AppConfigValues {
   readonly ipHashKeyVersion: number;
   readonly ipHashPreviousKey: Uint8Array | null;
   readonly trustedProxies: readonly string[];
+  readonly lmtpHost: string;
+  readonly lmtpPort: number;
+  readonly registerRateLimitPerHour: number;
 
   constructor(values: AppConfigValues) {
     this.port = values.port;
@@ -49,6 +55,9 @@ export class AppConfig implements AppConfigValues {
     this.ipHashKeyVersion = values.ipHashKeyVersion;
     this.ipHashPreviousKey = values.ipHashPreviousKey;
     this.trustedProxies = values.trustedProxies;
+    this.lmtpHost = values.lmtpHost;
+    this.lmtpPort = values.lmtpPort;
+    this.registerRateLimitPerHour = values.registerRateLimitPerHour;
   }
 }
 
@@ -79,5 +88,8 @@ export function loadConfig(
     ipHashKeyVersion: result.data.IP_HASH_KEY_VERSION,
     ipHashPreviousKey: result.data.IP_HASH_PREVIOUS_KEY ?? null,
     trustedProxies: result.data.TRUSTED_PROXIES,
+    lmtpHost: result.data.LMTP_HOST,
+    lmtpPort: result.data.LMTP_PORT,
+    registerRateLimitPerHour: result.data.REGISTER_RATE_LIMIT_PER_HOUR,
   });
 }

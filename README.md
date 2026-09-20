@@ -211,11 +211,18 @@ cp .env.example .env    # set your own POSTGRES_PASSWORD, PRELOGIN_SALT_KEY and 
 docker compose up --build
 ```
 
+**Note on registration rate limiting:** By default, each IP can register 3 accounts per hour. For manual testing with multiple registrations from the same IP, set `REGISTER_RATE_LIMIT_PER_HOUR=0` to disable the limit:
+
+```bash
+REGISTER_RATE_LIMIT_PER_HOUR=0 docker compose up
+```
+
 | Address | What |
 | --- | --- |
 | http://localhost:8080 | website and web client through nginx |
 | http://localhost:8080/api/health | API and database status |
 | `127.0.0.1:5433` | PostgreSQL for Prisma Studio and migrations from the host |
+| `127.0.0.1:2424` | LMTP of the `delivery` service, where incoming mail is handed over |
 
 Open exactly `localhost` or `127.0.0.1`: browsers treat them as a secure context, so `Secure` cookies work without HTTPS. The development mail domain is `shadowbox.test`; it comes from an environment variable and is not hard-coded anywhere.
 

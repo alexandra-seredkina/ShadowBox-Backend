@@ -27,6 +27,8 @@ describe('loadConfig', () => {
     expect(config.ipHashKeyVersion).toBe(1);
     expect(config.ipHashPreviousKey).toBeNull();
     expect(config.trustedProxies).toEqual([]);
+    expect(config.lmtpHost).toBe('127.0.0.1');
+    expect(config.lmtpPort).toBe(2424);
   });
 
   it('normalizes allowed origins', () => {
@@ -105,6 +107,26 @@ describe('loadConfig', () => {
     'rejects the proxy %j',
     (proxy) => {
       expect(() => loadConfig({ ...validEnv, TRUSTED_PROXIES: proxy })).toThrow(
+        ConfigValidationError,
+      );
+    },
+  );
+
+  it('parses the LMTP listener address', () => {
+    const config = loadConfig({
+      ...validEnv,
+      LMTP_HOST: '0.0.0.0',
+      LMTP_PORT: '24',
+    });
+
+    expect(config.lmtpHost).toBe('0.0.0.0');
+    expect(config.lmtpPort).toBe(24);
+  });
+
+  it.each(['backend', '', '127.0.0.1:24'])(
+    'rejects the LMTP host %j',
+    (host) => {
+      expect(() => loadConfig({ ...validEnv, LMTP_HOST: host })).toThrow(
         ConfigValidationError,
       );
     },

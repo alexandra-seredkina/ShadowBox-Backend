@@ -2,6 +2,7 @@ import { isIP } from 'node:net';
 import { z } from 'zod';
 
 const DEFAULT_PORT = 3000;
+const DEFAULT_LMTP_PORT = 2424;
 
 export const LOG_LEVELS = [
   'fatal',
@@ -71,6 +72,19 @@ export const envSchema = z.object({
     secretKeySchema.optional(),
   ),
   TRUSTED_PROXIES: proxyListSchema,
+  /** Where the delivery process takes mail from the MTA; never a public interface. */
+  LMTP_HOST: z
+    .string()
+    .refine((address) => isIP(address) !== 0)
+    .default('127.0.0.1'),
+  LMTP_PORT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(65_535)
+    .default(DEFAULT_LMTP_PORT),
+  /** Registration attempts per hour per IP; 0 = unlimited (dev only). */
+  REGISTER_RATE_LIMIT_PER_HOUR: z.coerce.number().int().min(0).default(3),
 });
 
 export type Env = z.infer<typeof envSchema>;

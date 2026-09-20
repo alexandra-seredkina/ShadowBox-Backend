@@ -216,6 +216,7 @@ docker compose up --build
 | http://localhost:8080 | Website und Webclient über nginx |
 | http://localhost:8080/api/health | Zustand von API und Datenbank |
 | `127.0.0.1:5433` | PostgreSQL für Prisma Studio und Migrationen vom Host |
+| `127.0.0.1:2424` | LMTP des Dienstes `delivery`, der eingehende Mail übernimmt |
 
 Öffne genau `localhost` oder `127.0.0.1`: Browser behandeln sie als sicheren Kontext, deshalb funktionieren `Secure`-Cookies ohne HTTPS. Die Mail-Domain in der Entwicklung ist `shadowbox.test`; sie kommt aus einer Umgebungsvariable und steht nirgends fest im Code.
 

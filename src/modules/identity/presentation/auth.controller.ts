@@ -98,7 +98,7 @@ export class AuthController {
   @Post('register')
   @RateLimit({
     scope: 'auth.register',
-    limit: 3,
+    limit: 3, // Tunable via REGISTER_RATE_LIMIT_PER_HOUR env (requires restart)
     windowMs: 60 * MINUTE_MS,
     per: 'ip',
   })

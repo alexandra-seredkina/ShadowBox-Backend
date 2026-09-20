@@ -1,2 +1,1 @@
 export const MAX_ACTIVE_ALIASES_PER_ACCOUNT = 20;
-export const MAX_MESSAGE_BYTES = 25 * 1024 * 1024;
