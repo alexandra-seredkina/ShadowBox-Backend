@@ -103,13 +103,13 @@ Prioritäten in dieser Reihenfolge: **Sicherheit → Anonymität → Komfort**.
 
 | | Funktion | Status |
 | --- | --- | :---: |
-| 👤 | Registrierung mit Login und Passwort, Proof-of-Work statt Captcha | 🚧 |
-| 🔑 | Schlüssel entstehen im Browser, der private Schlüssel lebt nur im Speicher des Tabs | 📋 |
-| ✉️ | Dauerhafte und temporäre Adressen, Beschriftungen, Ordner für eingehende Mail | 📋 |
-| 📥 | Mail-Empfang mit Verschlüsselung im Moment des Eingangs | 📋 |
-| 🛡 | Bedrohungslabels und SPF/DKIM/DMARC-Ergebnisse in verständlicher Sprache | 📋 |
-| 🗂 | Ordner, Sammelaktionen, Suche über entschlüsselte Mail auf dem Client | 📋 |
-| 💻 | Sitzungsliste, jede Sitzung beenden, optionale Bindung der Sitzung an die IP | 📋 |
+| 👤 | Registrierung mit Login und Passwort, Proof-of-Work statt Captcha | ✅ |
+| 🔑 | Schlüssel entstehen im Browser, der private Schlüssel lebt nur im Speicher des Tabs | ✅ |
+| ✉️ | Dauerhafte und temporäre Adressen, Beschriftungen, Ordner für eingehende Mail | ✅ |
+| 📥 | Mail-Empfang mit Verschlüsselung im Moment des Eingangs | 🚧 |
+| 🛡 | Bedrohungslabels und SPF/DKIM/DMARC-Ergebnisse in verständlicher Sprache | ✅ |
+| 🗂 | Ordner, Sammelaktionen, Suche über entschlüsselte Mail auf dem Client | ✅ |
+| 💻 | Sitzungsliste, jede Sitzung beenden, optionale Bindung der Sitzung an die IP | ✅ |
 | 🌍 | Website auf Englisch, Russisch und Deutsch | ✅ |
 
 ✅ fertig · 🚧 in Arbeit · 📋 geplant

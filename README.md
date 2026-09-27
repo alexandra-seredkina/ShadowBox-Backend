@@ -103,13 +103,13 @@ Priorities, in this order: **security → anonymity → convenience**.
 
 | | Feature | Status |
 | --- | --- | :---: |
-| 👤 | Sign-up with a login and password, proof-of-work instead of a captcha | 🚧 |
-| 🔑 | Keys are generated in the browser, the private key lives only in the tab's memory | 📋 |
-| ✉️ | Permanent and temporary addresses, labels, a folder for incoming mail | 📋 |
-| 📥 | Mail intake with encryption at the moment of receipt | 📋 |
-| 🛡 | Threat labels and SPF/DKIM/DMARC results in plain language | 📋 |
-| 🗂 | Folders, bulk actions, client-side search over decrypted mail | 📋 |
-| 💻 | Session list, ending any session, optional binding of a session to its IP | 📋 |
+| 👤 | Sign-up with a login and password, proof-of-work instead of a captcha | ✅ |
+| 🔑 | Keys are generated in the browser, the private key lives only in the tab's memory | ✅ |
+| ✉️ | Permanent and temporary addresses, labels, a folder for incoming mail | ✅ |
+| 📥 | Mail intake with encryption at the moment of receipt | 🚧 |
+| 🛡 | Threat labels and SPF/DKIM/DMARC results in plain language | ✅ |
+| 🗂 | Folders, bulk actions, client-side search over decrypted mail | ✅ |
+| 💻 | Session list, ending any session, optional binding of a session to its IP | ✅ |
 | 🌍 | Website in English, Russian and German | ✅ |
 
 ✅ done · 🚧 in progress · 📋 planned
