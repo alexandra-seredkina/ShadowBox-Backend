@@ -36,3 +36,12 @@ export const metadataBlobSchema: z.ZodType<EncryptedBlobJson> = z.strictObject({
     METADATA_PLAINTEXT_MAX_BYTES + TAG_BYTES,
   ),
 });
+
+/** A blob the server sealed itself, such as a message preview: any content size. */
+export const storedBlobSchema: z.ZodType<EncryptedBlobJson> = z.strictObject({
+  v: z.literal(ENCRYPTED_BLOB_VERSION),
+  alg: z.literal(ENCRYPTED_BLOB_ALGORITHM),
+  sealedKey: base64UrlOfSize(SEALED_KEY_BYTES, SEALED_KEY_BYTES),
+  nonce: base64UrlOfSize(NONCE_BYTES, NONCE_BYTES),
+  ciphertext: z.string().min(encodedLength(TAG_BYTES)).regex(BASE64URL),
+});

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { MessageModule } from '../message/message.module.js';
+import { InboundMailModule } from '../message/inbound-mail.module.js';
 import { CheckRecipientHandler } from './application/check-recipient.handler.js';
 import { RecipientDirectory } from './domain/recipient-directory.js';
 import { LmtpListener } from './infrastructure/lmtp-listener.js';
 import { PrismaRecipientDirectory } from './infrastructure/prisma-recipient-directory.js';
 
 @Module({
-  imports: [MessageModule],
+  imports: [InboundMailModule],
   providers: [
     CheckRecipientHandler,
     LmtpListener,
