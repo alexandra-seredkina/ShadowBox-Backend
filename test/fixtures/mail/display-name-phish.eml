@@ -1,0 +1,10 @@
+From: "PayPal (paypal.com)" <service@account-check.example>
+To: you@shadowbox.test
+Subject: Your account is limited
+Date: Wed, 15 Jan 2020 12:00:00 +0000
+Message-ID: <limit-77@account-check.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+We noticed unusual activity. Confirm your details within 24 hours
+or your account will be closed.

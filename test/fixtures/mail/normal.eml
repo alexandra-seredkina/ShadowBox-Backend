@@ -1,0 +1,13 @@
+From: "Corner Shop" <news@shop.example>
+To: you@shadowbox.test
+Subject: Your order has shipped
+Date: Wed, 15 Jan 2020 12:00:00 +0000
+Message-ID: <order-1042@shop.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hi,
+
+your order 1042 left our warehouse today and should arrive within three days.
+
+Corner Shop

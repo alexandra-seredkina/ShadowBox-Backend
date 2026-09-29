@@ -220,6 +220,15 @@ docker compose up --build
 
 Öffne genau `localhost` oder `127.0.0.1`: Browser behandeln sie als sicheren Kontext, deshalb funktionieren `Secure`-Cookies ohne HTTPS. Die Mail-Domain in der Entwicklung ist `shadowbox.test`; sie kommt aus einer Umgebungsvariable und steht nirgends fest im Code.
 
+Für eine Testnachricht übergib eine Datei an den Dienst `delivery`, so wie es der Mailserver tut. Die Adresse ist eine deiner Adressen aus dem Webclient:
+
+```bash
+npm run mail:inject -- --to k7f3mz9q2a@shadowbox.test --file test/fixtures/mail/link-bait.eml
+npm run mail:inject -- --to k7f3mz9q2a@shadowbox.test --large-mib 20
+```
+
+In `test/fixtures/mail/` liegen eine normale Nachricht, ein gefälschter Anzeigename, eine Doppelgänger-Domain, ein getarnter Link, ein `.exe`-Anhang und ein Tracking-Pixel. `--client-ip` gibt eine Absenderadresse für die SPF-Prüfung vor, `--from` den Absender im Umschlag.
+
 Der Code beider Repositorys wird in die Container gemountet und lädt bei Änderungen neu. Nach geänderten Abhängigkeiten die Container mit frischen Volumes neu bauen:
 
 ```bash

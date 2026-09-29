@@ -226,6 +226,15 @@ REGISTER_RATE_LIMIT_PER_HOUR=0 docker compose up
 
 Open exactly `localhost` or `127.0.0.1`: browsers treat them as a secure context, so `Secure` cookies work without HTTPS. The development mail domain is `shadowbox.test`; it comes from an environment variable and is not hard-coded anywhere.
 
+To receive a test message, hand a file to the `delivery` service the way the mail server would. The address is one of your aliases from the web client:
+
+```bash
+npm run mail:inject -- --to k7f3mz9q2a@shadowbox.test --file test/fixtures/mail/link-bait.eml
+npm run mail:inject -- --to k7f3mz9q2a@shadowbox.test --large-mib 20
+```
+
+`test/fixtures/mail/` has an ordinary message, a display-name spoof, a lookalike domain, a disguised link, an `.exe` attachment and a tracking pixel. `--client-ip` passes a sender address for the SPF check, `--from` sets the envelope sender.
+
 The code of both repositories is mounted into the containers and reloads on change. After changing dependencies, rebuild the containers with fresh volumes:
 
 ```bash

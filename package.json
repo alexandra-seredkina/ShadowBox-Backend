@@ -8,7 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -17,7 +17,7 @@
     "start:worker:prod": "node dist/worker",
     "start:delivery": "nest start --watch --entryFile delivery",
     "start:delivery:prod": "node dist/delivery",
-    "lint": "oxlint -c oxlint.json --type-aware --deny-warnings src/ test/",
+    "lint": "oxlint -c oxlint.json --type-aware --deny-warnings src/ test/ scripts/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -26,7 +26,8 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "test:integration": "vitest run --config ./vitest.config.integration.ts",
     "postinstall": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "mail:inject": "node scripts/mail-inject.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
