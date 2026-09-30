@@ -217,6 +217,7 @@ docker compose up --build
 | http://localhost:8080/api/health | Zustand von API und Datenbank |
 | `127.0.0.1:5433` | PostgreSQL für Prisma Studio und Migrationen vom Host |
 | `127.0.0.1:2424` | LMTP des Dienstes `delivery`, der eingehende Mail übernimmt |
+| `127.0.0.1:2525` | SMTP des lokalen Postfix: nimmt Mail für `shadowbox.test` an und gibt sie an `delivery` weiter |
 
 Öffne genau `localhost` oder `127.0.0.1`: Browser behandeln sie als sicheren Kontext, deshalb funktionieren `Secure`-Cookies ohne HTTPS. Die Mail-Domain in der Entwicklung ist `shadowbox.test`; sie kommt aus einer Umgebungsvariable und steht nirgends fest im Code.
 
@@ -228,6 +229,14 @@ npm run mail:inject -- --to k7f3mz9q2a@shadowbox.test --large-mib 20
 ```
 
 In `test/fixtures/mail/` liegen eine normale Nachricht, ein gefälschter Anzeigename, eine Doppelgänger-Domain, ein getarnter Link, ein `.exe`-Anhang und ein Tracking-Pixel. `--client-ip` gibt eine Absenderadresse für die SPF-Prüfung vor, `--from` den Absender im Umschlag.
+
+Oder schick sie über echtes SMTP durch Postfix, mit [swaks](https://www.jetmore.org/john/code/swaks/). Achte auf das `@` vor dem Dateinamen:
+
+```bash
+swaks --server 127.0.0.1:2525 --to k7f3mz9q2a@shadowbox.test --from news@shop.example --data @test/fixtures/mail/normal.eml
+```
+
+Postfix fragt den Dienst `delivery` nach jedem Empfänger, bevor er eine Nachricht annimmt: eine unbekannte oder deaktivierte Adresse wird schon im SMTP-Dialog mit `550` abgelehnt, andere Domains bekommen `Relay access denied`. Die Warteschlange liegt nur im Arbeitsspeicher.
 
 Der Code beider Repositorys wird in die Container gemountet und lädt bei Änderungen neu. Nach geänderten Abhängigkeiten die Container mit frischen Volumes neu bauen:
 

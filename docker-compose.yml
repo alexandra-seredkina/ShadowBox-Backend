@@ -79,6 +79,21 @@ services:
       backend:
         condition: service_healthy
 
+  # Local MX for tools like swaks: SMTP on 127.0.0.1:2525, handed to the
+  # delivery service over LMTP. Its queue is a tmpfs, so mail waiting for
+  # delivery never touches the disk.
+  mta:
+    build: ./postfix
+    environment:
+      MAIL_DOMAIN: ${MAIL_DOMAIN:-shadowbox.test}
+      LMTP_ADDRESS: delivery:2424
+    tmpfs:
+      - /var/spool/postfix:mode=0755
+    ports:
+      - '127.0.0.1:${SMTP_HOST_PORT:-2525}:25'
+    depends_on:
+      - delivery
+
   frontend:
     build:
       context: ../ShadowBox-Frontend

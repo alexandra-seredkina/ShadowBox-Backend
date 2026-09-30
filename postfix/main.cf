@@ -1,0 +1,41 @@
+# Receive-only MX: accepts mail for the mail domain and hands it to the
+# delivery service over LMTP. It sends nothing to the outside.
+compatibility_level = 3.11
+smtpd_banner = $myhostname ESMTP
+biff = no
+append_dot_mydomain = no
+maillog_file = /dev/stdout
+
+inet_interfaces = all
+inet_protocols = ipv4
+mydestination =
+mynetworks = 127.0.0.0/8
+local_transport = error:local delivery is disabled
+default_transport = error:outbound mail is disabled
+
+# Ask the delivery service about every recipient before accepting the
+# message, so unknown addresses are refused in the SMTP dialogue and no
+# bounce is ever sent back. Answers are kept in memory, briefly: a new or
+# disabled address takes effect within a minute.
+smtpd_helo_required = yes
+disable_vrfy_command = yes
+smtpd_recipient_restrictions =
+  reject_non_fqdn_recipient,
+  reject_unauth_destination,
+  reject_unverified_recipient
+unverified_recipient_reject_code = 550
+unverified_recipient_reject_reason = Recipient address rejected
+address_verify_map =
+address_verify_positive_expire_time = 60s
+address_verify_positive_refresh_time = 30s
+address_verify_negative_expire_time = 60s
+address_verify_negative_refresh_time = 30s
+
+# The delivery service limits a message to 25 MiB and 50 recipients.
+message_size_limit = 26214400
+smtpd_recipient_limit = 50
+lmtp_destination_recipient_limit = 50
+
+# Pass on the real client so SPF is checked against it.
+lmtp_send_xforward_command = yes
+lmtp_host_lookup = native

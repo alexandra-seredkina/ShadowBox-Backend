@@ -223,6 +223,7 @@ REGISTER_RATE_LIMIT_PER_HOUR=0 docker compose up
 | http://localhost:8080/api/health | API and database status |
 | `127.0.0.1:5433` | PostgreSQL for Prisma Studio and migrations from the host |
 | `127.0.0.1:2424` | LMTP of the `delivery` service, where incoming mail is handed over |
+| `127.0.0.1:2525` | SMTP of the local Postfix: accepts mail for `shadowbox.test` and passes it to `delivery` |
 
 Open exactly `localhost` or `127.0.0.1`: browsers treat them as a secure context, so `Secure` cookies work without HTTPS. The development mail domain is `shadowbox.test`; it comes from an environment variable and is not hard-coded anywhere.
 
@@ -234,6 +235,14 @@ npm run mail:inject -- --to k7f3mz9q2a@shadowbox.test --large-mib 20
 ```
 
 `test/fixtures/mail/` has an ordinary message, a display-name spoof, a lookalike domain, a disguised link, an `.exe` attachment and a tracking pixel. `--client-ip` passes a sender address for the SPF check, `--from` sets the envelope sender.
+
+Or send it over real SMTP, through Postfix, with [swaks](https://www.jetmore.org/john/code/swaks/). Note the `@` before the file name:
+
+```bash
+swaks --server 127.0.0.1:2525 --to k7f3mz9q2a@shadowbox.test --from news@shop.example --data @test/fixtures/mail/normal.eml
+```
+
+Postfix asks the `delivery` service about every recipient before it accepts a message: an unknown or disabled address is refused with `550` during the SMTP dialogue, and other domains get `Relay access denied`. Its queue lives in memory only.
 
 The code of both repositories is mounted into the containers and reloads on change. After changing dependencies, rebuild the containers with fresh volumes:
 
