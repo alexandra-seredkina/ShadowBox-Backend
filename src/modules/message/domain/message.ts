@@ -27,6 +27,7 @@ export interface MessageSummary {
   readonly aliasId: MessageAliasId | null;
   readonly receivedAt: Date;
   readonly isRead: boolean;
+  readonly isStarred: boolean;
   readonly sizeBytes: number;
   readonly threat: Threat;
   readonly encryptedPreview: EncryptedBlobJson;
@@ -38,18 +39,35 @@ export interface MessagePosition {
   readonly id: MessageId;
 }
 
-/** A position is only meaningful inside the folder it was taken from. */
+/** Which messages a list shows. Starred ones are taken from every folder but the trash. */
+export type MessageScope =
+  | { readonly kind: 'folder'; readonly folderId: MessageFolderId }
+  | { readonly kind: 'starred' };
+
+/** A position is only meaningful inside the scope it was taken from. */
 export interface MessageCursor extends MessagePosition {
-  readonly folderId: MessageFolderId;
+  readonly scope: MessageScope;
+}
+
+export function isSameScope(a: MessageScope, b: MessageScope): boolean {
+  switch (a.kind) {
+    case 'folder':
+      return b.kind === 'folder' && a.folderId === b.folderId;
+    case 'starred':
+      return b.kind === 'starred';
+  }
 }
 
 export interface MessageChanges {
   readonly isRead?: boolean;
+  readonly isStarred?: boolean;
   readonly folderId?: MessageFolderId;
 }
 
 export type BatchAction =
   | { readonly kind: 'markRead' }
   | { readonly kind: 'markUnread' }
+  | { readonly kind: 'star' }
+  | { readonly kind: 'unstar' }
   | { readonly kind: 'move'; readonly folderId: MessageFolderId }
   | { readonly kind: 'delete' };

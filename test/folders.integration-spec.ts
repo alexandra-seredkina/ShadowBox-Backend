@@ -77,6 +77,11 @@ describe('Folders (e2e on PostgreSQL)', () => {
       },
       expect.objectContaining({
         kind: 'system',
+        systemRole: 'archive',
+        encryptedName: null,
+      }),
+      expect.objectContaining({
+        kind: 'system',
         systemRole: 'spam',
         encryptedName: null,
       }),
@@ -104,7 +109,7 @@ describe('Folders (e2e on PostgreSQL)', () => {
 
     await call('delete', `folders/${id}`, kage).expect(204);
     const listed = await call('get', 'folders', kage).expect(200);
-    expect(listed.body.items).toHaveLength(3);
+    expect(listed.body.items).toHaveLength(4);
   });
 
   it('unpins addresses from a deleted folder', async () => {

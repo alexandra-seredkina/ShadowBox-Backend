@@ -8,6 +8,7 @@ import type {
   MessageFolderId,
   MessageId,
   MessageOwnerId,
+  MessageScope,
 } from '../domain/message.js';
 import { ApplyMessageBatchHandler } from './apply-message-batch.handler.js';
 import { DeleteMessageHandler } from './delete-message.handler.js';
@@ -32,7 +33,7 @@ describe('message handlers', () => {
   beforeEach(() => {
     repository = new InMemoryMessageRepository();
     repository.addFolder(KAGE, INBOX);
-    repository.addFolder(KAGE, TRASH);
+    repository.addTrash(KAGE, TRASH);
     repository.addFolder(OTHER, FOREIGN_FOLDER);
   });
 
@@ -53,11 +54,11 @@ describe('message handlers', () => {
   describe('ListMessagesHandler', () => {
     const list = (
       cursor: Parameters<ListMessagesHandler['execute']>[0]['cursor'],
-      folderId: MessageFolderId = INBOX,
+      scope: MessageScope = { kind: 'folder', folderId: INBOX },
     ): ReturnType<ListMessagesHandler['execute']> =>
       new ListMessagesHandler(repository).execute({
         ownerId: KAGE,
-        folderId,
+        scope,
         cursor,
         limit: 2,
       });
@@ -85,19 +86,46 @@ describe('message handlers', () => {
       await expect(list(null)).resolves.toMatchObject({ next: null });
     });
 
-    it('refuses a cursor taken in another folder', async () => {
+    it('refuses a cursor taken in another scope', async () => {
       addMessages(3);
       const { next } = await list(null);
 
       await expect(
-        list(next === null ? null : { ...next, folderId: TRASH }),
+        list(
+          next === null
+            ? null
+            : { ...next, scope: { kind: 'folder', folderId: TRASH } },
+        ),
       ).rejects.toThrow(ValidationFailedError);
+      await expect(list(next, { kind: 'starred' })).rejects.toThrow(
+        ValidationFailedError,
+      );
     });
 
     it("answers someone else's folder as missing", async () => {
       addMessages(1, OTHER);
 
-      await expect(list(null, FOREIGN_FOLDER)).rejects.toThrow(NotFoundError);
+      await expect(
+        list(null, { kind: 'folder', folderId: FOREIGN_FOLDER }),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('lists starred messages from every folder but the trash', async () => {
+      addMessages(3);
+      await new ApplyMessageBatchHandler(repository).execute({
+        ownerId: KAGE,
+        ids: [messageId(1), messageId(2), messageId(3)],
+        action: { kind: 'star' },
+      });
+      await new UpdateMessageHandler(repository).execute({
+        ownerId: KAGE,
+        id: messageId(2),
+        changes: { folderId: TRASH },
+      });
+
+      const page = await list(null, { kind: 'starred' });
+
+      expect(page.items.map((m) => m.id)).toEqual([messageId(3), messageId(1)]);
     });
   });
 

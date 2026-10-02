@@ -272,7 +272,7 @@ describe('Account and sessions (e2e on PostgreSQL)', () => {
       }
       await call('get', 'account', { ...kage, cookie }).expect(401);
       await call('get', 'account', other).expect(200);
-      await expect(prisma.folder.count()).resolves.toBe(3);
+      await expect(prisma.folder.count()).resolves.toBe(4);
       await expect(prisma.session.count()).resolves.toBe(1);
     });
 

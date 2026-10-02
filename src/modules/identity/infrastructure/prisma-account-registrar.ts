@@ -20,7 +20,7 @@ import {
 } from '../domain/registration.js';
 import { toSessionData } from './session-data.js';
 
-const SYSTEM_FOLDER_ROLES = ['inbox', 'spam', 'trash'] as const;
+const SYSTEM_FOLDER_ROLES = ['inbox', 'archive', 'spam', 'trash'] as const;
 const CREATED = 201;
 
 const ERROR_BY_MODEL: Readonly<Record<string, () => Error>> = {

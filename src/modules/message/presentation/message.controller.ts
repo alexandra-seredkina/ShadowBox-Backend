@@ -36,9 +36,9 @@ import type {
 import {
   batchRequestSchema,
   listMessagesQuerySchema,
-  parseMessageFolderId,
   parseMessageId,
   toBatchAction,
+  toMessageScope,
   updateMessageRequestSchema,
 } from './message.schemas.js';
 
@@ -66,7 +66,7 @@ export class MessageController {
   ): Promise<{ items: MessageSummaryResponse[]; nextCursor: string | null }> {
     const page = await this.listMessages.execute({
       ownerId: ownerOf(session),
-      folderId: parseMessageFolderId(query.folderId),
+      scope: toMessageScope(query),
       cursor: query.cursor === undefined ? null : decodeCursor(query.cursor),
       limit: query.limit,
     });
@@ -127,6 +127,7 @@ export class MessageController {
       id: parseMessageId(id),
       changes: {
         ...(body.isRead === undefined ? {} : { isRead: body.isRead }),
+        ...(body.isStarred === undefined ? {} : { isStarred: body.isStarred }),
         ...(body.folderId === undefined
           ? {}
           : { folderId: body.folderId as MessageFolderId }),

@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import { NotFoundError } from '../../../shared/errors/not-found.error.js';
+import { ValidationFailedError } from '../../../shared/errors/validation-failed.error.js';
 import type {
   BatchAction,
   MessageFolderId,
   MessageId,
+  MessageScope,
 } from '../domain/message.js';
 import {
   DEFAULT_PAGE_SIZE,
@@ -13,7 +15,8 @@ import {
 
 /** folderId stays a plain string here: a malformed one is answered with 404, see parseMessageFolderId. */
 export const listMessagesQuerySchema = z.strictObject({
-  folderId: z.string(),
+  folderId: z.string().optional(),
+  starred: z.literal('true').optional(),
   cursor: z.string().optional(),
   limit: z.coerce
     .number()
@@ -24,8 +27,26 @@ export const listMessagesQuerySchema = z.strictObject({
 });
 export type ListMessagesQuery = z.infer<typeof listMessagesQuerySchema>;
 
+/** Exactly one of folderId and starred says which messages to list. */
+export function toMessageScope(query: ListMessagesQuery): MessageScope {
+  const given = [query.folderId, query.starred].filter(
+    (value) => value !== undefined,
+  ).length;
+  if (given > 1) {
+    throw new ValidationFailedError([{ path: '', issue: 'invalid_value' }]);
+  }
+  if (query.starred !== undefined) {
+    return { kind: 'starred' };
+  }
+  if (query.folderId === undefined) {
+    throw new ValidationFailedError([{ path: 'folderId', issue: 'required' }]);
+  }
+  return { kind: 'folder', folderId: parseMessageFolderId(query.folderId) };
+}
+
 export const updateMessageRequestSchema = z.strictObject({
   isRead: z.boolean().optional(),
+  isStarred: z.boolean().optional(),
   folderId: z.uuid().optional(),
 });
 export type UpdateMessageRequest = z.infer<typeof updateMessageRequestSchema>;
@@ -41,7 +62,7 @@ export const batchRequestSchema = z.discriminatedUnion('action', [
   }),
   z.strictObject({
     ids: idsSchema,
-    action: z.enum(['markRead', 'markUnread', 'delete']),
+    action: z.enum(['markRead', 'markUnread', 'star', 'unstar', 'delete']),
   }),
 ]);
 export type BatchRequest = z.infer<typeof batchRequestSchema>;

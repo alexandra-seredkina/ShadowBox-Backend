@@ -3,10 +3,11 @@ import { NotFoundError } from '../../../shared/errors/not-found.error.js';
 import { ValidationFailedError } from '../../../shared/errors/validation-failed.error.js';
 import type {
   MessageCursor,
-  MessageFolderId,
   MessageOwnerId,
+  MessageScope,
   MessageSummary,
 } from '../domain/message.js';
+import { isSameScope } from '../domain/message.js';
 import { MessageRepository } from '../domain/message.repository.js';
 
 export interface MessagePage {
@@ -21,14 +22,17 @@ export class ListMessagesHandler {
 
   async execute(query: {
     readonly ownerId: MessageOwnerId;
-    readonly folderId: MessageFolderId;
+    readonly scope: MessageScope;
     readonly cursor: MessageCursor | null;
     readonly limit: number;
   }): Promise<MessagePage> {
-    if (!(await this.messages.isOwnFolder(query.ownerId, query.folderId))) {
+    if (!(await this.isOwnScope(query.ownerId, query.scope))) {
       throw new NotFoundError();
     }
-    if (query.cursor !== null && query.cursor.folderId !== query.folderId) {
+    if (
+      query.cursor !== null &&
+      !isSameScope(query.cursor.scope, query.scope)
+    ) {
       throw new ValidationFailedError([
         { path: 'cursor', issue: 'invalid_value' },
       ]);
@@ -36,7 +40,7 @@ export class ListMessagesHandler {
     // One extra row tells whether another page follows.
     const rows = await this.messages.list(
       query.ownerId,
-      query.folderId,
+      query.scope,
       query.cursor,
       query.limit + 1,
     );
@@ -46,12 +50,20 @@ export class ListMessagesHandler {
       items,
       next:
         rows.length > query.limit && last !== undefined
-          ? {
-              folderId: query.folderId,
-              receivedAt: last.receivedAt,
-              id: last.id,
-            }
+          ? { scope: query.scope, receivedAt: last.receivedAt, id: last.id }
           : null,
     };
+  }
+
+  private async isOwnScope(
+    ownerId: MessageOwnerId,
+    scope: MessageScope,
+  ): Promise<boolean> {
+    switch (scope.kind) {
+      case 'folder':
+        return this.messages.isOwnFolder(ownerId, scope.folderId);
+      case 'starred':
+        return true;
+    }
   }
 }

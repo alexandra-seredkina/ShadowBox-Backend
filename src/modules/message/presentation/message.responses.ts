@@ -14,6 +14,7 @@ export interface MessageSummaryResponse {
   readonly aliasId: string | null;
   readonly receivedAt: string;
   readonly isRead: boolean;
+  readonly isStarred: boolean;
   readonly sizeBytes: number;
   readonly threat: {
     readonly verdict: string;
@@ -36,6 +37,7 @@ export function toMessageSummaryResponse(
     aliasId: message.aliasId,
     receivedAt: toApiInstant(message.receivedAt),
     isRead: message.isRead,
+    isStarred: message.isStarred,
     sizeBytes: message.sizeBytes,
     threat: {
       verdict: message.threat.verdict,

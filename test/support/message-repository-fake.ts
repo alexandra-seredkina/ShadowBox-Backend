@@ -6,6 +6,7 @@ import type {
   MessageId,
   MessageOwnerId,
   MessagePosition,
+  MessageScope,
   MessageSummary,
 } from '../../src/modules/message/domain/message.js';
 import { MessageRepository } from '../../src/modules/message/domain/message.repository.js';
@@ -30,6 +31,7 @@ export function messageSummary(
     aliasId: null,
     receivedAt: new Date('2020-01-15T12:00:00Z'),
     isRead: false,
+    isStarred: false,
     sizeBytes: 1024,
     threat: {
       verdict: 'safe',
@@ -51,9 +53,16 @@ export function messageSummary(
 export class InMemoryMessageRepository extends MessageRepository {
   private messages: StoredMessage[] = [];
   private readonly folders = new Map<string, string>();
+  private readonly trashes = new Set<string>();
 
   addFolder(ownerId: string, folderId: string): void {
     this.folders.set(folderId, ownerId);
+  }
+
+  /** Starred views leave this folder out. */
+  addTrash(ownerId: string, folderId: string): void {
+    this.addFolder(ownerId, folderId);
+    this.trashes.add(folderId);
   }
 
   add(ownerId: string, summary: MessageSummary): void {
@@ -79,13 +88,13 @@ export class InMemoryMessageRepository extends MessageRepository {
 
   list(
     ownerId: MessageOwnerId,
-    folderId: MessageFolderId,
+    scope: MessageScope,
     after: MessagePosition | null,
     limit: number,
   ): Promise<MessageSummary[]> {
     return Promise.resolve(
       this.own(ownerId)
-        .filter((message) => message.folderId === folderId)
+        .filter((message) => this.isInScope(message, scope))
         .filter((message) => after === null || newestFirst(after, message) < 0)
         .toSorted(newestFirst)
         .slice(0, limit),
@@ -141,6 +150,20 @@ export class InMemoryMessageRepository extends MessageRepository {
         return this.change(ownerId, wanted, {
           isRead: action.kind === 'markRead',
         });
+      case 'star':
+      case 'unstar':
+        return this.change(ownerId, wanted, {
+          isStarred: action.kind === 'star',
+        });
+    }
+  }
+
+  private isInScope(message: MessageSummary, scope: MessageScope): boolean {
+    switch (scope.kind) {
+      case 'folder':
+        return message.folderId === scope.folderId;
+      case 'starred':
+        return message.isStarred && !this.trashes.has(message.folderId);
     }
   }
 

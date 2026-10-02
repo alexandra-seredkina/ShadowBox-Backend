@@ -8,7 +8,7 @@ export type FolderOwnerId = Brand<string, 'FolderOwnerId'>;
 export const MAX_CUSTOM_FOLDERS = 50;
 
 /** Display order of the folders every account gets at sign-up. */
-export const SYSTEM_ROLES = ['inbox', 'spam', 'trash'] as const;
+export const SYSTEM_ROLES = ['inbox', 'archive', 'spam', 'trash'] as const;
 export type SystemRole = (typeof SYSTEM_ROLES)[number];
 
 /** System folders have a role and no name; custom ones the other way round. */

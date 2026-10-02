@@ -34,6 +34,7 @@ enum FolderKind {
 
 enum FolderSystemRole {
   inbox
+  archive
   spam
   trash
 
@@ -180,6 +181,7 @@ model Message {
   aliasId          String?        @map("alias_id") @db.Uuid
   receivedAt       DateTime       @map("received_at") @db.Timestamptz(3)
   isRead           Boolean        @default(false) @map("is_read")
+  isStarred        Boolean        @default(false) @map("is_starred")
   /// Rounded up to 1 KiB.
   sizeBytes        Int            @map("size_bytes")
   threatVerdict    ThreatVerdict  @map("threat_verdict")
@@ -204,6 +206,7 @@ model Message {
 
   @@index([accountId, folderId, receivedAt(sort: Desc), id(sort: Desc)])
   @@index([folderId, isRead])
+  @@index([accountId, isStarred, receivedAt(sort: Desc), id(sort: Desc)])
   @@map("messages")
 }
 

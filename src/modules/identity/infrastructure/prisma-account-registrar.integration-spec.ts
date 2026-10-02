@@ -88,6 +88,7 @@ describe('PrismaAccountRegistrar', () => {
     });
     expect(folders).toEqual([
       { kind: 'system', systemRole: 'inbox' },
+      { kind: 'system', systemRole: 'archive' },
       { kind: 'system', systemRole: 'spam' },
       { kind: 'system', systemRole: 'trash' },
     ]);

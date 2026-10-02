@@ -15,6 +15,7 @@ import type {
   MessageId,
   MessageOwnerId,
   MessagePosition,
+  MessageScope,
   MessageSummary,
 } from '../domain/message.js';
 import { MessageRepository } from '../domain/message.repository.js';
@@ -26,6 +27,7 @@ const SUMMARY_FIELDS = {
   aliasId: true,
   receivedAt: true,
   isRead: true,
+  isStarred: true,
   sizeBytes: true,
   threatVerdict: true,
   threatMarkers: true,
@@ -44,6 +46,7 @@ function toSummary(row: SummaryRow): MessageSummary {
     aliasId: row.aliasId as MessageAliasId | null,
     receivedAt: row.receivedAt,
     isRead: row.isRead,
+    isStarred: row.isStarred,
     sizeBytes: row.sizeBytes,
     threat: {
       verdict: row.threatVerdict,
@@ -80,6 +83,10 @@ function batchChange(
       return { isRead: true };
     case 'markUnread':
       return { isRead: false };
+    case 'star':
+      return { isStarred: true };
+    case 'unstar':
+      return { isStarred: false };
     case 'move':
       return { folderId: action.folderId };
   }
@@ -98,17 +105,47 @@ export class PrismaMessageRepository implements MessageRepository {
 
   async list(
     ownerId: MessageOwnerId,
-    folderId: MessageFolderId,
+    scope: MessageScope,
     position: MessagePosition | null,
     limit: number,
   ): Promise<MessageSummary[]> {
     const rows = await this.prisma.message.findMany({
-      where: { accountId: ownerId, folderId, ...after(position) },
+      where: {
+        accountId: ownerId,
+        ...(await this.scopeFilter(ownerId, scope)),
+        ...after(position),
+      },
       orderBy: [{ receivedAt: 'desc' }, { id: 'desc' }],
       take: limit,
       select: SUMMARY_FIELDS,
     });
     return rows.map(toSummary);
+  }
+
+  /** Views across folders leave the trash out. */
+  private async scopeFilter(
+    ownerId: MessageOwnerId,
+    scope: MessageScope,
+  ): Promise<Prisma.MessageWhereInput> {
+    switch (scope.kind) {
+      case 'folder':
+        return { folderId: scope.folderId };
+      case 'starred':
+        return {
+          isStarred: true,
+          folderId: { not: await this.trashOf(ownerId) },
+        };
+    }
+  }
+
+  private async trashOf(ownerId: MessageOwnerId): Promise<string> {
+    const trash = await this.prisma.folder.findUniqueOrThrow({
+      where: {
+        accountId_systemRole: { accountId: ownerId, systemRole: 'trash' },
+      },
+      select: { id: true },
+    });
+    return trash.id;
   }
 
   async find(

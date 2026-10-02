@@ -39,7 +39,7 @@ describe('Messages (e2e on PostgreSQL)', () => {
 
   async function folderOf(
     user: TestUser,
-    role: 'spam' | 'trash',
+    role: 'archive' | 'spam' | 'trash',
   ): Promise<string> {
     const folder = await prisma.folder.findFirstOrThrow({
       where: {
@@ -139,6 +139,7 @@ describe('Messages (e2e on PostgreSQL)', () => {
             aliasId: null,
             receivedAt: '2020-01-15T12:01:00Z',
             isRead: false,
+            isStarred: false,
             sizeBytes: 2048,
             threat: {
               verdict: 'caution',
@@ -417,6 +418,90 @@ describe('Messages (e2e on PostgreSQL)', () => {
       expect(folderWithoutMove.body.error.details).toEqual([
         { path: 'folderId', issue: 'unknown_field' },
       ]);
+    });
+  });
+
+  describe('starred and archive', () => {
+    it('stars messages and lists them across folders but not from the trash', async () => {
+      const archive = await folderOf(kage, 'archive');
+      const trash = await folderOf(kage, 'trash');
+      const inInbox = await deliver(kage, 1);
+      const inArchive = await deliver(kage, 2, { folderId: archive });
+      const inTrash = await deliver(kage, 3, { folderId: trash });
+      await deliver(kage, 4);
+      await deliver(other, 5);
+
+      await call('post', 'messages/batch', kage)
+        .send({ ids: [inInbox, inArchive, inTrash], action: 'star' })
+        .expect(200);
+      const starred = await call(
+        'get',
+        'messages?starred=true&limit=1',
+        kage,
+      ).expect(200);
+      const rest = await call(
+        'get',
+        `messages?starred=true&cursor=${starred.body.nextCursor}`,
+        kage,
+      ).expect(200);
+
+      expect(
+        [...starred.body.items, ...rest.body.items].map(
+          (item: { id: string; isStarred: boolean }) => [
+            item.id,
+            item.isStarred,
+          ],
+        ),
+      ).toEqual([
+        [inArchive, true],
+        [inInbox, true],
+      ]);
+    });
+
+    it('unstars one message with PATCH', async () => {
+      const id = await deliver(kage, 1);
+      await call('patch', `messages/${id}`, kage)
+        .send({ isStarred: true })
+        .expect(200);
+
+      const response = await call('patch', `messages/${id}`, kage)
+        .send({ isStarred: false })
+        .expect(200);
+
+      expect(response.body.isStarred).toBe(false);
+    });
+
+    it('takes exactly one scope', async () => {
+      const both = await call(
+        'get',
+        `messages?folderId=${kage.inboxId}&starred=true`,
+        kage,
+      ).expect(400);
+      const wrong = await call('get', 'messages?starred=yes', kage).expect(400);
+      const inbox = await call(
+        'get',
+        `messages?folderId=${kage.inboxId}&limit=1`,
+        kage,
+      ).expect(200);
+      await deliver(kage, 1);
+      await deliver(kage, 2);
+      const page = await call(
+        'get',
+        `messages?folderId=${kage.inboxId}&limit=1`,
+        kage,
+      ).expect(200);
+      const mixed = await call(
+        'get',
+        `messages?starred=true&cursor=${page.body.nextCursor}`,
+        kage,
+      ).expect(400);
+
+      expect(inbox.body.items).toEqual([]);
+      expect(both.body.error.details).toEqual([
+        { path: '', issue: 'invalid_value' },
+      ]);
+      expect(wrong.body.error.details[0].path).toBe('starred');
+      expect(mixed.body.error.details[0].path).toBe('cursor');
     });
   });
 

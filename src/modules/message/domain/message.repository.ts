@@ -6,6 +6,7 @@ import type {
   MessageId,
   MessageOwnerId,
   MessagePosition,
+  MessageScope,
   MessageSummary,
 } from './message.js';
 
@@ -22,7 +23,7 @@ export abstract class MessageRepository {
   /** Newest first (receivedAt, then id), starting after `after`. */
   abstract list(
     ownerId: MessageOwnerId,
-    folderId: MessageFolderId,
+    scope: MessageScope,
     after: MessagePosition | null,
     limit: number,
   ): Promise<MessageSummary[]>;
