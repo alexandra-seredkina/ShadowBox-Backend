@@ -39,6 +39,7 @@ describe('alias snapshot', () => {
       nonce: 'b',
       ciphertext: 'c',
     },
+    labelIds: ['0192c5a0-7d2e-7b3a-8c4d-0000000000aa'],
     folderId: null,
     expiresAt: new Date('2020-01-22T12:00:00.123Z'),
     createdAt: NOW,

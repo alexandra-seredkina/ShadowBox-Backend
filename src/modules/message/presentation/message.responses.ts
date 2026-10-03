@@ -16,6 +16,7 @@ export interface MessageSummaryResponse {
   readonly isRead: boolean;
   readonly isStarred: boolean;
   readonly sizeBytes: number;
+  readonly labelIds: readonly string[];
   readonly threat: {
     readonly verdict: string;
     readonly markers: readonly string[];
@@ -39,6 +40,7 @@ export function toMessageSummaryResponse(
     isRead: message.isRead,
     isStarred: message.isStarred,
     sizeBytes: message.sizeBytes,
+    labelIds: message.labelIds,
     threat: {
       verdict: message.threat.verdict,
       markers: message.threat.markers,

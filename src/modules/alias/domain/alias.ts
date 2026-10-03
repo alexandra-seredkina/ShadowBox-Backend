@@ -24,6 +24,7 @@ export type AliasTtl = keyof typeof ALIAS_TTL_MS;
 export const ALIAS_TTLS = Object.keys(ALIAS_TTL_MS) as readonly AliasTtl[];
 
 export const MAX_ACTIVE_ALIASES = 20;
+export const MAX_LABELS_PER_ALIAS = 10;
 
 export interface Alias {
   readonly id: AliasId;
@@ -33,6 +34,8 @@ export interface Alias {
   readonly status: AliasStatus;
   readonly encryptedLabel: EncryptedBlobJson | null;
   readonly folderId: string | null;
+  /** Put on every new message to the address; in label creation order. */
+  readonly labelIds: readonly string[];
   readonly expiresAt: Date | null;
   readonly createdAt: Date;
   readonly lastReceivedAt: Date | null;
@@ -54,6 +57,8 @@ export interface AliasChanges {
   readonly status?: AliasStatus | undefined;
   readonly encryptedLabel?: EncryptedBlobJson | null | undefined;
   readonly folderId?: string | null | undefined;
+  /** Replaces the whole set. */
+  readonly labelIds?: readonly string[] | undefined;
 }
 
 const blobSnapshotSchema = z.strictObject({
@@ -73,6 +78,8 @@ const snapshotSchema = z.strictObject({
   status: z.enum(ALIAS_STATUSES),
   encryptedLabel: blobSnapshotSchema.nullable(),
   folderId: z.string().nullable(),
+  /** Records written before labels existed have none. */
+  labelIds: z.array(z.string()).default([]),
   expiresAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
   lastReceivedAt: z.iso.datetime().nullable(),
@@ -88,6 +95,7 @@ const dateOrNull = (iso: string | null): Date | null =>
 export function toAliasSnapshot(alias: Alias): AliasSnapshot {
   return {
     ...alias,
+    labelIds: [...alias.labelIds],
     expiresAt: isoOrNull(alias.expiresAt),
     createdAt: alias.createdAt.toISOString(),
     lastReceivedAt: isoOrNull(alias.lastReceivedAt),

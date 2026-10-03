@@ -7,10 +7,12 @@ export type MessageId = Brand<string, 'MessageId'>;
 export type MessageOwnerId = Brand<string, 'MessageOwnerId'>;
 export type MessageAliasId = Brand<string, 'MessageAliasId'>;
 export type MessageFolderId = Brand<string, 'MessageFolderId'>;
+export type MessageLabelId = Brand<string, 'MessageLabelId'>;
 
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
 export const MAX_BATCH_IDS = 100;
+export const MAX_LABELS_PER_MESSAGE = 50;
 
 const KIB = 1024;
 
@@ -29,6 +31,8 @@ export interface MessageSummary {
   readonly isRead: boolean;
   readonly isStarred: boolean;
   readonly sizeBytes: number;
+  /** In label creation order. */
+  readonly labelIds: readonly MessageLabelId[];
   readonly threat: Threat;
   readonly encryptedPreview: EncryptedBlobJson;
 }
@@ -39,9 +43,10 @@ export interface MessagePosition {
   readonly id: MessageId;
 }
 
-/** Which messages a list shows. Starred ones are taken from every folder but the trash. */
+/** Which messages a list shows. Starred and labelled ones come from every folder but the trash. */
 export type MessageScope =
   | { readonly kind: 'folder'; readonly folderId: MessageFolderId }
+  | { readonly kind: 'label'; readonly labelId: MessageLabelId }
   | { readonly kind: 'starred' };
 
 /** A position is only meaningful inside the scope it was taken from. */
@@ -53,6 +58,8 @@ export function isSameScope(a: MessageScope, b: MessageScope): boolean {
   switch (a.kind) {
     case 'folder':
       return b.kind === 'folder' && a.folderId === b.folderId;
+    case 'label':
+      return b.kind === 'label' && a.labelId === b.labelId;
     case 'starred':
       return b.kind === 'starred';
   }
@@ -62,6 +69,8 @@ export interface MessageChanges {
   readonly isRead?: boolean;
   readonly isStarred?: boolean;
   readonly folderId?: MessageFolderId;
+  /** Replaces the whole set. */
+  readonly labelIds?: readonly MessageLabelId[];
 }
 
 export type BatchAction =
@@ -70,4 +79,6 @@ export type BatchAction =
   | { readonly kind: 'star' }
   | { readonly kind: 'unstar' }
   | { readonly kind: 'move'; readonly folderId: MessageFolderId }
+  | { readonly kind: 'label'; readonly labelId: MessageLabelId }
+  | { readonly kind: 'unlabel'; readonly labelId: MessageLabelId }
   | { readonly kind: 'delete' };

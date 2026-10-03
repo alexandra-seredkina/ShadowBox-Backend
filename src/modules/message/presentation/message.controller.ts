@@ -21,7 +21,11 @@ import { ListMessagesHandler } from '../application/list-messages.handler.js';
 import { LoadMessageContentHandler } from '../application/load-message-content.handler.js';
 import { LoadMessageHandler } from '../application/load-message.handler.js';
 import { UpdateMessageHandler } from '../application/update-message.handler.js';
-import type { MessageFolderId, MessageOwnerId } from '../domain/message.js';
+import type {
+  MessageFolderId,
+  MessageLabelId,
+  MessageOwnerId,
+} from '../domain/message.js';
 import { decodeCursor, encodeCursor } from './message-cursor.js';
 import {
   MessageSummaryResponse,
@@ -131,6 +135,13 @@ export class MessageController {
         ...(body.folderId === undefined
           ? {}
           : { folderId: body.folderId as MessageFolderId }),
+        ...(body.labelIds === undefined
+          ? {}
+          : {
+              labelIds: body.labelIds.map(
+                (labelId) => labelId as MessageLabelId,
+              ),
+            }),
       },
     });
     return toMessageSummaryResponse(message);

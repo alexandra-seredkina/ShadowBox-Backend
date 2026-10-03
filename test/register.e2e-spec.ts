@@ -122,6 +122,7 @@ describe('POST /api/v1/auth/register (e2e)', () => {
         status: 'active',
         encryptedLabel: null,
         folderId: null,
+        labelIds: [],
         expiresAt: null,
         createdAt: expect.stringMatching(API_DATE),
         lastReceivedAt: null,

@@ -141,6 +141,7 @@ describe('Messages (e2e on PostgreSQL)', () => {
             isRead: false,
             isStarred: false,
             sizeBytes: 2048,
+            labelIds: [],
             threat: {
               verdict: 'caution',
               markers: ['UNKNOWN_SENDER'],

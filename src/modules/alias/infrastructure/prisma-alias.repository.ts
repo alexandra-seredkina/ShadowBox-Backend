@@ -33,6 +33,10 @@ const ALIAS_FIELDS = {
   expiresAt: true,
   createdAt: true,
   lastReceivedAt: true,
+  labels: {
+    select: { labelId: true },
+    orderBy: { label: { createdAt: 'asc' } },
+  },
 } as const;
 
 type AliasRow = Prisma.AliasGetPayload<{ select: typeof ALIAS_FIELDS }>;
@@ -46,10 +50,12 @@ function toDomain(row: AliasRow): Alias {
   if (row.status === 'revoked') {
     throw new Error('A revoked alias must never leave the repository');
   }
+  const { labels, ...fields } = row;
   return {
-    ...row,
+    ...fields,
     id: row.id as AliasId,
     status: row.status,
+    labelIds: labels.map((link) => link.labelId),
     encryptedLabel:
       row.encryptedLabel === null
         ? null
@@ -131,6 +137,9 @@ export class PrismaAliasRepository implements AliasRepository {
             expiresAt: alias.expiresAt,
             encryptedLabel: toJsonColumn(alias.encryptedLabel),
             folderId: alias.folderId,
+            labels: {
+              create: alias.labelIds.map((labelId) => ({ labelId })),
+            },
           },
           select: ALIAS_FIELDS,
         });
@@ -165,9 +174,19 @@ export class PrismaAliasRepository implements AliasRepository {
       if (changes.status === 'active' && current.status !== 'active') {
         await ensureRoomForActive(tx, ownerId, options);
       }
+      if (changes.labelIds !== undefined) {
+        await tx.aliasLabel.deleteMany({ where: { aliasId: id } });
+      }
       const row = await tx.alias.update({
         where: { id },
         data: {
+          ...(changes.labelIds === undefined
+            ? {}
+            : {
+                labels: {
+                  create: changes.labelIds.map((labelId) => ({ labelId })),
+                },
+              }),
           ...(changes.status === undefined ? {} : { status: changes.status }),
           ...(changes.encryptedLabel === undefined
             ? {}
@@ -183,10 +202,15 @@ export class PrismaAliasRepository implements AliasRepository {
   }
 
   async revoke(ownerId: OwnerId, id: AliasId, now: Date): Promise<void> {
-    await this.prisma.alias.updateMany({
-      where: { ...liveWhere(ownerId, now), id },
-      data: revokedFields(now),
-    });
+    await this.prisma.$transaction([
+      this.prisma.aliasLabel.deleteMany({
+        where: { alias: { ...liveWhere(ownerId, now), id } },
+      }),
+      this.prisma.alias.updateMany({
+        where: { ...liveWhere(ownerId, now), id },
+        data: revokedFields(now),
+      }),
+    ]);
   }
 
   async revokeExpired(now: Date): Promise<number> {
@@ -197,6 +221,9 @@ export class PrismaAliasRepository implements AliasRepository {
         expiresAt: { lte: now },
       },
       data: revokedFields(now),
+    });
+    await this.prisma.aliasLabel.deleteMany({
+      where: { alias: { status: 'revoked' } },
     });
     return count;
   }

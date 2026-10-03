@@ -62,6 +62,8 @@ export class ListMessagesHandler {
     switch (scope.kind) {
       case 'folder':
         return this.messages.isOwnFolder(ownerId, scope.folderId);
+      case 'label':
+        return this.messages.isOwnLabel(ownerId, scope.labelId);
       case 'starred':
         return true;
     }

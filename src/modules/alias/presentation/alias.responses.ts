@@ -9,6 +9,7 @@ export interface AliasResponse {
   readonly status: string;
   readonly encryptedLabel: EncryptedBlobJson | null;
   readonly folderId: string | null;
+  readonly labelIds: readonly string[];
   readonly expiresAt: string | null;
   readonly createdAt: string;
   readonly lastReceivedAt: string | null;
@@ -22,6 +23,7 @@ export function toAliasResponse(alias: Alias): AliasResponse {
     status: alias.status,
     encryptedLabel: alias.encryptedLabel,
     folderId: alias.folderId,
+    labelIds: alias.labelIds,
     expiresAt: alias.expiresAt === null ? null : toApiInstant(alias.expiresAt),
     createdAt: toApiDate(alias.createdAt),
     lastReceivedAt:

@@ -4,6 +4,7 @@ import type {
   MessageChanges,
   MessageFolderId,
   MessageId,
+  MessageLabelId,
   MessageOwnerId,
   MessagePosition,
   MessageScope,
@@ -18,6 +19,11 @@ export abstract class MessageRepository {
   abstract isOwnFolder(
     ownerId: MessageOwnerId,
     folderId: MessageFolderId,
+  ): Promise<boolean>;
+
+  abstract isOwnLabel(
+    ownerId: MessageOwnerId,
+    labelId: MessageLabelId,
   ): Promise<boolean>;
 
   /** Newest first (receivedAt, then id), starting after `after`. */
@@ -38,7 +44,7 @@ export abstract class MessageRepository {
     id: MessageId,
   ): Promise<EncryptedBlob | null>;
 
-  /** Null when the message, or the folder to move it to, is not the owner's. */
+  /** Null when the message, the folder to move it to or one of the labels is not the owner's. */
   abstract update(
     ownerId: MessageOwnerId,
     id: MessageId,
@@ -47,8 +53,8 @@ export abstract class MessageRepository {
 
   /**
    * One transaction over the owner's messages among `ids`, others skipped.
-   * @returns how many were found, or null when the target folder of a move
-   *   is not the owner's (and nothing changed).
+   * @returns how many were found, or null when the folder or label the
+   *   action names is not the owner's (and nothing changed).
    */
   abstract applyBatch(
     ownerId: MessageOwnerId,

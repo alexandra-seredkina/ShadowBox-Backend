@@ -1,6 +1,7 @@
 import {
   InMemoryAliasRepository,
   InMemoryFolderDirectory,
+  InMemoryLabelDirectory,
 } from '../../../../test/support/alias-fakes.js';
 import {
   FixedClock,
@@ -38,6 +39,9 @@ const LABEL: EncryptedBlobJson = {
   ciphertext: 'label',
 };
 
+const KAGE_LABEL = '0192c5a0-7d2e-7b3a-8c4d-0000000000a1';
+const OTHER_LABEL = '0192c5a0-7d2e-7b3a-8c4d-0000000000a2';
+
 describe('alias handlers', () => {
   let clock: FixedClock;
   let aliases: InMemoryAliasRepository;
@@ -54,6 +58,7 @@ describe('alias handlers', () => {
       lifetime: { kind: 'temporary', ttl: '7d' },
       encryptedLabel: LABEL,
       folderId: null,
+      labelIds: [],
       idempotencyKey: null,
       ...overrides,
     };
@@ -65,16 +70,20 @@ describe('alias handlers', () => {
     const folders = new InMemoryFolderDirectory();
     folders.folders.set(KAGE_FOLDER, KAGE);
     folders.folders.set(OTHER_FOLDER, OTHER);
+    const labels = new InMemoryLabelDirectory();
+    labels.labels.set(KAGE_LABEL, KAGE);
+    labels.labels.set(OTHER_LABEL, OTHER);
     create = new CreateAliasHandler(
       aliases,
       folders,
+      labels,
       aliases,
       new InMemoryAttemptCounter(),
       new SequentialRandom(),
       clock,
       createTestConfig(),
     );
-    update = new UpdateAliasHandler(aliases, folders, clock);
+    update = new UpdateAliasHandler(aliases, folders, labels, clock);
     revoke = new RevokeAliasHandler(aliases, clock);
     list = new ListAliasesHandler(aliases, clock);
   });
@@ -327,6 +336,40 @@ describe('alias handlers', () => {
           reauthUntil: null,
         }),
       ).rejects.toBeInstanceOf(NotFoundError);
+    });
+  });
+
+  describe('labels', () => {
+    it('creates an address that labels its mail', async () => {
+      const alias = await create.execute(command({ labelIds: [KAGE_LABEL] }));
+
+      expect(alias.labelIds).toEqual([KAGE_LABEL]);
+    });
+
+    it("refuses someone else's label and creates nothing", async () => {
+      await expect(
+        create.execute(command({ labelIds: [KAGE_LABEL, OTHER_LABEL] })),
+      ).rejects.toThrow(NotFoundError);
+      expect(aliases.rows).toHaveLength(0);
+    });
+
+    it('replaces the labels of an address', async () => {
+      const alias = await create.execute(command({ labelIds: [KAGE_LABEL] }));
+
+      const cleared = await update.execute({
+        ownerId: KAGE,
+        id: alias.id,
+        changes: { labelIds: [] },
+      });
+
+      expect(cleared.labelIds).toEqual([]);
+      await expect(
+        update.execute({
+          ownerId: KAGE,
+          id: alias.id,
+          changes: { labelIds: [OTHER_LABEL] },
+        }),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 });

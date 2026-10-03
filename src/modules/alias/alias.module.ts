@@ -7,8 +7,10 @@ import { RevokeAliasHandler } from './application/revoke-alias.handler.js';
 import { UpdateAliasHandler } from './application/update-alias.handler.js';
 import { AliasRepository } from './domain/alias.repository.js';
 import { FolderDirectory } from './domain/folder-directory.js';
+import { LabelDirectory } from './domain/label-directory.js';
 import { PrismaAliasRepository } from './infrastructure/prisma-alias.repository.js';
 import { PrismaFolderDirectory } from './infrastructure/prisma-folder-directory.js';
+import { PrismaLabelDirectory } from './infrastructure/prisma-label-directory.js';
 import { AliasController } from './presentation/alias.controller.js';
 
 @Module({
@@ -22,6 +24,7 @@ import { AliasController } from './presentation/alias.controller.js';
     ExpireTemporaryAliasesJob,
     { provide: AliasRepository, useClass: PrismaAliasRepository },
     { provide: FolderDirectory, useClass: PrismaFolderDirectory },
+    { provide: LabelDirectory, useClass: PrismaLabelDirectory },
   ],
   /** Scheduled by the worker process, see worker.module.ts. */
   exports: [ExpireTemporaryAliasesJob],

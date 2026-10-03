@@ -50,6 +50,7 @@ export interface AliasResponse {
   readonly status: string;
   readonly encryptedLabel: null;
   readonly folderId: string | null;
+  readonly labelIds: readonly string[];
   readonly expiresAt: string | null;
   readonly createdAt: string;
   readonly lastReceivedAt: string | null;
@@ -114,7 +115,7 @@ export function toAccountResponse(account: AccountSummary): AccountResponse {
   };
 }
 
-/** The first address never has a label yet; labels arrive with the alias module. */
+/** The first address has no description or labels yet: both come later from the alias module. */
 export function toAliasResponse(alias: AliasSummary): AliasResponse {
   return {
     id: alias.id,
@@ -123,6 +124,7 @@ export function toAliasResponse(alias: AliasSummary): AliasResponse {
     status: alias.status,
     encryptedLabel: null,
     folderId: alias.folderId,
+    labelIds: [],
     expiresAt: alias.expiresAt === null ? null : toApiInstant(alias.expiresAt),
     createdAt: toApiDate(alias.createdAt),
     lastReceivedAt:

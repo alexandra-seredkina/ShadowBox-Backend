@@ -15,6 +15,7 @@ describe('ExpireTemporaryAliasesJob', () => {
       kind: 'temporary' as const,
       encryptedLabel: null,
       folderId: null,
+      labelIds: [],
     };
     await aliases.create(
       { ...base, localPart: 'expired000', expiresAt: NOW },

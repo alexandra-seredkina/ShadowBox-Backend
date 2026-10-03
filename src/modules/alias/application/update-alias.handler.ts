@@ -10,6 +10,7 @@ import {
 } from '../domain/alias.js';
 import { AliasRepository } from '../domain/alias.repository.js';
 import { FolderDirectory } from '../domain/folder-directory.js';
+import { LabelDirectory } from '../domain/label-directory.js';
 
 export interface UpdateAliasCommand {
   readonly ownerId: OwnerId;
@@ -22,15 +23,18 @@ export class UpdateAliasHandler {
   constructor(
     private readonly aliases: AliasRepository,
     private readonly folders: FolderDirectory,
+    private readonly labels: LabelDirectory,
     private readonly clock: Clock,
   ) {}
 
   async execute(command: UpdateAliasCommand): Promise<Alias> {
-    const { folderId } = command.changes;
+    const { folderId, labelIds } = command.changes;
     if (
-      folderId !== undefined &&
-      folderId !== null &&
-      !(await this.folders.isOwnFolder(command.ownerId, folderId))
+      (folderId !== undefined &&
+        folderId !== null &&
+        !(await this.folders.isOwnFolder(command.ownerId, folderId))) ||
+      (labelIds !== undefined &&
+        !(await this.labels.areOwnLabels(command.ownerId, labelIds)))
     ) {
       throw new NotFoundError();
     }

@@ -80,6 +80,7 @@ export class AliasController {
           : { kind: 'permanent' },
       encryptedLabel: body.encryptedLabel,
       folderId: body.folderId,
+      labelIds: body.labelIds,
       idempotencyKey: parseIdempotencyKey(idempotencyKey),
     });
     return toAliasResponse(alias);

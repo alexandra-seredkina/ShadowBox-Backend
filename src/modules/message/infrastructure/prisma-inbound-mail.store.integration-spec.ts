@@ -180,6 +180,20 @@ describe('PrismaInboundMailStore', () => {
       expect(row.folderId).toBe(folder.id);
     });
 
+    it("puts the address's labels on the message", async () => {
+      const label = await prisma.label.create({
+        data: { accountId: ownerId, encryptedName: {} },
+      });
+      const aliasId = await createAlias('k7f3mz9q2a');
+      await prisma.aliasLabel.create({ data: { aliasId, labelId: label.id } });
+
+      await store.save(newMessage(aliasId));
+
+      expect(await prisma.messageLabel.findMany()).toEqual([
+        { messageId: expect.any(String), labelId: label.id },
+      ]);
+    });
+
     it('marks when the address last received mail', async () => {
       const aliasId = await createAlias('k7f3mz9q2a');
 

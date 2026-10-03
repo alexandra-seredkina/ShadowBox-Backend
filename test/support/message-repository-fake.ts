@@ -4,6 +4,7 @@ import type {
   MessageChanges,
   MessageFolderId,
   MessageId,
+  MessageLabelId,
   MessageOwnerId,
   MessagePosition,
   MessageScope,
@@ -33,6 +34,7 @@ export function messageSummary(
     isRead: false,
     isStarred: false,
     sizeBytes: 1024,
+    labelIds: [],
     threat: {
       verdict: 'safe',
       markers: [],
@@ -49,11 +51,36 @@ export function messageSummary(
   };
 }
 
+function flagChange(
+  kind: 'markRead' | 'markUnread' | 'star' | 'unstar',
+): MessageChanges {
+  switch (kind) {
+    case 'markRead':
+    case 'markUnread':
+      return { isRead: kind === 'markRead' };
+    case 'star':
+    case 'unstar':
+      return { isStarred: kind === 'star' };
+  }
+}
+
 /** Follows the repository contract: everything is scoped to the owner. */
 export class InMemoryMessageRepository extends MessageRepository {
   private messages: StoredMessage[] = [];
   private readonly folders = new Map<string, string>();
   private readonly trashes = new Set<string>();
+  private readonly labels = new Map<string, string>();
+
+  addLabel(ownerId: string, labelId: string): void {
+    this.labels.set(labelId, ownerId);
+  }
+
+  isOwnLabel(
+    ownerId: MessageOwnerId,
+    labelId: MessageLabelId,
+  ): Promise<boolean> {
+    return Promise.resolve(this.labels.get(labelId) === ownerId);
+  }
 
   addFolder(ownerId: string, folderId: string): void {
     this.folders.set(folderId, ownerId);
@@ -128,6 +155,11 @@ export class InMemoryMessageRepository extends MessageRepository {
     ) {
       return null;
     }
+    if (
+      changes.labelIds?.some((labelId) => this.labels.get(labelId) !== ownerId)
+    ) {
+      return null;
+    }
     const found = this.change(ownerId, new Set([id]), changes);
     return found === 0 ? null : this.find(ownerId, id);
   }
@@ -138,30 +170,52 @@ export class InMemoryMessageRepository extends MessageRepository {
     action: BatchAction,
   ): Promise<number | null> {
     const wanted = new Set<string>(ids);
-    switch (action.kind) {
-      case 'delete':
-        return this.remove(ownerId, wanted);
-      case 'move':
-        return (await this.isOwnFolder(ownerId, action.folderId))
-          ? this.change(ownerId, wanted, { folderId: action.folderId })
-          : null;
-      case 'markRead':
-      case 'markUnread':
-        return this.change(ownerId, wanted, {
-          isRead: action.kind === 'markRead',
-        });
-      case 'star':
-      case 'unstar':
-        return this.change(ownerId, wanted, {
-          isStarred: action.kind === 'star',
-        });
+    if (action.kind === 'delete') {
+      return this.remove(ownerId, wanted);
     }
+    if (action.kind === 'move') {
+      return (await this.isOwnFolder(ownerId, action.folderId))
+        ? this.change(ownerId, wanted, { folderId: action.folderId })
+        : null;
+    }
+    if (action.kind === 'label' || action.kind === 'unlabel') {
+      return (await this.isOwnLabel(ownerId, action.labelId))
+        ? this.relabel(ownerId, wanted, action)
+        : null;
+    }
+    return this.change(ownerId, wanted, flagChange(action.kind));
+  }
+
+  private relabel(
+    ownerId: string,
+    ids: ReadonlySet<string>,
+    action: Extract<BatchAction, { kind: 'label' | 'unlabel' }>,
+  ): number {
+    let found = 0;
+    this.messages = this.messages.map((message) => {
+      if (message.ownerId !== ownerId || !ids.has(message.summary.id)) {
+        return message;
+      }
+      found += 1;
+      const rest = message.summary.labelIds.filter(
+        (id) => id !== action.labelId,
+      );
+      const labelIds =
+        action.kind === 'label' ? [...rest, action.labelId] : rest;
+      return { ...message, summary: { ...message.summary, labelIds } };
+    });
+    return found;
   }
 
   private isInScope(message: MessageSummary, scope: MessageScope): boolean {
     switch (scope.kind) {
       case 'folder':
         return message.folderId === scope.folderId;
+      case 'label':
+        return (
+          message.labelIds.includes(scope.labelId) &&
+          !this.trashes.has(message.folderId)
+        );
       case 'starred':
         return message.isStarred && !this.trashes.has(message.folderId);
     }

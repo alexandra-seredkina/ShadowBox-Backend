@@ -33,8 +33,8 @@ export abstract class InboundMailStore {
 
   /**
    * One transaction: files the message in the address's folder (the inbox
-   * when it has none), remembers the sender and marks when the address last
-   * received mail.
+   * when it has none), puts the address's labels on it, remembers the sender
+   * and marks when the address last received mail.
    */
   abstract save(message: NewMessage): Promise<void>;
 }

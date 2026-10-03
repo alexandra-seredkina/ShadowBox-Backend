@@ -13,6 +13,7 @@ import {
   NewAlias,
 } from '../../src/modules/alias/domain/alias.repository.js';
 import { FolderDirectory } from '../../src/modules/alias/domain/folder-directory.js';
+import { LabelDirectory } from '../../src/modules/alias/domain/label-directory.js';
 import { AliasAddressTakenError } from '../../src/shared/kernel/alias-local-part.js';
 import {
   IdempotencyClaim,
@@ -185,5 +186,18 @@ export class InMemoryFolderDirectory implements FolderDirectory {
 
   isOwnFolder(ownerId: OwnerId, folderId: string): Promise<boolean> {
     return Promise.resolve(this.folders.get(folderId) === ownerId);
+  }
+}
+
+export class InMemoryLabelDirectory implements LabelDirectory {
+  readonly labels = new Map<string, OwnerId>();
+
+  areOwnLabels(
+    ownerId: OwnerId,
+    labelIds: readonly string[],
+  ): Promise<boolean> {
+    return Promise.resolve(
+      labelIds.every((labelId) => this.labels.get(labelId) === ownerId),
+    );
   }
 }

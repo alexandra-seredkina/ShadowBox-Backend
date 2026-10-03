@@ -68,6 +68,7 @@ describe('PrismaAliasRepository', () => {
       expiresAt: new Date(NOW.getTime() + HOUR_MS),
       encryptedLabel: LABEL,
       folderId: null,
+      labelIds: [],
       ...overrides,
     };
   }

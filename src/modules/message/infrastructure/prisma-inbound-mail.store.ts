@@ -37,13 +37,20 @@ export class PrismaInboundMailStore implements InboundMailStore {
       const alias = await tx.alias.update({
         where: { id: message.aliasId, accountId: message.ownerId },
         data: { lastReceivedAt: message.receivedAt },
-        select: { folderId: true },
+        select: { folderId: true, labels: { select: { labelId: true } } },
       });
-      await tx.message.create({
+      const created = await tx.message.create({
         data: messageRow(
           message,
           alias.folderId ?? (await inboxOf(tx, message.ownerId)),
         ),
+        select: { id: true },
+      });
+      await tx.messageLabel.createMany({
+        data: alias.labels.map(({ labelId }) => ({
+          messageId: created.id,
+          labelId,
+        })),
       });
       if (message.sender !== null) {
         await tx.knownSender.createMany({

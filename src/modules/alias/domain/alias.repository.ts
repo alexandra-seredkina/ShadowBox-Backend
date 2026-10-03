@@ -17,6 +17,7 @@ export interface NewAlias {
   readonly expiresAt: Date | null;
   readonly encryptedLabel: EncryptedBlobJson | null;
   readonly folderId: string | null;
+  readonly labelIds: readonly string[];
 }
 
 /**

@@ -97,6 +97,7 @@ model Account {
   sessions           Session[]
   aliases            Alias[]
   folders            Folder[]
+  labels             Label[]
   messages           Message[]
   knownSenders       KnownSender[]
   idempotencyRecords IdempotencyRecord[]
@@ -144,9 +145,10 @@ model Alias {
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  account  Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  folder   Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  account  Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  folder   Folder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
   messages Message[]
+  labels   AliasLabel[]
 
   @@unique([localPart, domain])
   @@index([accountId, status, createdAt(sort: Desc)])
@@ -199,15 +201,57 @@ model Message {
   createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
   /// NoAction is checked at the end of the statement, so deleting an account cascades through both.
-  folder  Folder  @relation(fields: [folderId, accountId], references: [id, accountId], onDelete: NoAction)
-  alias   Alias?  @relation(fields: [aliasId], references: [id], onDelete: SetNull)
+  folder  Folder         @relation(fields: [folderId, accountId], references: [id, accountId], onDelete: NoAction)
+  alias   Alias?         @relation(fields: [aliasId], references: [id], onDelete: SetNull)
+  labels  MessageLabel[]
 
   @@index([accountId, folderId, receivedAt(sort: Desc), id(sort: Desc)])
   @@index([folderId, isRead])
   @@index([accountId, isStarred, receivedAt(sort: Desc), id(sort: Desc)])
   @@map("messages")
+}
+
+model Label {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  accountId     String   @map("account_id") @db.Uuid
+  /// EncryptedBlob v1 with the name and the color, sealed by the client.
+  encryptedName Json     @map("encrypted_name")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  account  Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messages MessageLabel[]
+  aliases  AliasLabel[]
+
+  @@index([accountId, createdAt])
+  @@map("labels")
+}
+
+model MessageLabel {
+  messageId String @map("message_id") @db.Uuid
+  labelId   String @map("label_id") @db.Uuid
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  label   Label   @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, labelId])
+  @@index([labelId])
+  @@map("message_labels")
+}
+
+/// Labels put on every new message to the address.
+model AliasLabel {
+  aliasId String @map("alias_id") @db.Uuid
+  labelId String @map("label_id") @db.Uuid
+
+  alias Alias @relation(fields: [aliasId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([aliasId, labelId])
+  @@index([labelId])
+  @@map("alias_labels")
 }
 
 /// Only an HMAC of the sender under a versioned key, no timestamps.

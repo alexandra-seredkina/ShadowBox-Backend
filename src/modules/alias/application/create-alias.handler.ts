@@ -31,6 +31,7 @@ import {
 } from '../domain/alias.js';
 import { AliasRepository } from '../domain/alias.repository.js';
 import { FolderDirectory } from '../domain/folder-directory.js';
+import { LabelDirectory } from '../domain/label-directory.js';
 
 export const CREATE_ALIAS_OPERATION = 'aliases.create';
 const CREATIONS_PER_HOUR = 30;
@@ -43,16 +44,19 @@ export interface CreateAliasCommand {
   readonly lifetime: AliasLifetime;
   readonly encryptedLabel: EncryptedBlobJson | null;
   readonly folderId: string | null;
+  readonly labelIds: readonly string[];
   readonly idempotencyKey: string | null;
 }
 
 function hashRequest(command: CreateAliasCommand): Uint8Array {
-  const { lifetime, encryptedLabel, folderId } = command;
+  const { lifetime, encryptedLabel, folderId, labelIds } = command;
   const fields = [
     lifetime.kind,
     lifetime.kind === 'temporary' ? lifetime.ttl : null,
     encryptedLabel,
     folderId,
+    // Left out when empty, so keys used before labels existed still replay.
+    ...(labelIds.length === 0 ? [] : [labelIds]),
   ];
   return createHash('sha256').update(JSON.stringify(fields)).digest();
 }
@@ -62,6 +66,7 @@ export class CreateAliasHandler {
   constructor(
     private readonly aliases: AliasRepository,
     private readonly folders: FolderDirectory,
+    private readonly labels: LabelDirectory,
     private readonly idempotency: IdempotencyRepository,
     private readonly counter: AttemptCounter,
     private readonly random: SecureRandom,
@@ -77,8 +82,9 @@ export class CreateAliasHandler {
     }
     await this.throttle(command.ownerId);
     if (
-      command.folderId !== null &&
-      !(await this.folders.isOwnFolder(command.ownerId, command.folderId))
+      (command.folderId !== null &&
+        !(await this.folders.isOwnFolder(command.ownerId, command.folderId))) ||
+      !(await this.labels.areOwnLabels(command.ownerId, command.labelIds))
     ) {
       throw new NotFoundError();
     }
@@ -109,6 +115,7 @@ export class CreateAliasHandler {
             expiresAt: expiresAtFor(command.lifetime, now),
             encryptedLabel: command.encryptedLabel,
             folderId: command.folderId,
+            labelIds: command.labelIds,
           },
           { maxActive: MAX_ACTIVE_ALIASES, now, idempotency },
         );

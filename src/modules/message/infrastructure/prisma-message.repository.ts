@@ -13,6 +13,7 @@ import type {
   MessageChanges,
   MessageFolderId,
   MessageId,
+  MessageLabelId,
   MessageOwnerId,
   MessagePosition,
   MessageScope,
@@ -35,6 +36,10 @@ const SUMMARY_FIELDS = {
   dkimResult: true,
   dmarcResult: true,
   encryptedPreview: true,
+  labels: {
+    select: { labelId: true },
+    orderBy: { label: { createdAt: 'asc' } },
+  },
 } as const;
 
 type SummaryRow = Prisma.MessageGetPayload<{ select: typeof SUMMARY_FIELDS }>;
@@ -48,6 +53,7 @@ function toSummary(row: SummaryRow): MessageSummary {
     isRead: row.isRead,
     isStarred: row.isStarred,
     sizeBytes: row.sizeBytes,
+    labelIds: row.labels.map((link) => link.labelId as MessageLabelId),
     threat: {
       verdict: row.threatVerdict,
       markers: row.threatMarkers,
@@ -75,8 +81,13 @@ function after(
   };
 }
 
+type FlagAction = Extract<
+  BatchAction,
+  { kind: 'markRead' | 'markUnread' | 'star' | 'unstar' | 'move' }
+>;
+
 function batchChange(
-  action: Exclude<BatchAction, { kind: 'delete' }>,
+  action: FlagAction,
 ): Prisma.MessageUncheckedUpdateManyInput {
   switch (action.kind) {
     case 'markRead':
@@ -101,6 +112,13 @@ export class PrismaMessageRepository implements MessageRepository {
     folderId: MessageFolderId,
   ): Promise<boolean> {
     return isOwnFolder(this.prisma, ownerId, folderId);
+  }
+
+  async isOwnLabel(
+    ownerId: MessageOwnerId,
+    labelId: MessageLabelId,
+  ): Promise<boolean> {
+    return areOwnLabels(this.prisma, ownerId, [labelId]);
   }
 
   async list(
@@ -130,6 +148,11 @@ export class PrismaMessageRepository implements MessageRepository {
     switch (scope.kind) {
       case 'folder':
         return { folderId: scope.folderId };
+      case 'label':
+        return {
+          labels: { some: { labelId: scope.labelId } },
+          folderId: { not: await this.trashOf(ownerId) },
+        };
       case 'starred':
         return {
           isStarred: true,
@@ -193,18 +216,18 @@ export class PrismaMessageRepository implements MessageRepository {
     changes: MessageChanges,
   ): Promise<MessageSummary | null> {
     return this.prisma.$transaction(async (tx) => {
-      if (
-        changes.folderId !== undefined &&
-        !(await isOwnFolder(tx, ownerId, changes.folderId))
-      ) {
+      const { labelIds, ...flags } = changes;
+      const isAllowed =
+        (await tx.message.count({ where: { id, accountId: ownerId } })) > 0 &&
+        (flags.folderId === undefined ||
+          (await isOwnFolder(tx, ownerId, flags.folderId))) &&
+        (labelIds === undefined || (await areOwnLabels(tx, ownerId, labelIds)));
+      if (!isAllowed) {
         return null;
       }
-      const { count } = await tx.message.updateMany({
-        where: { id, accountId: ownerId },
-        data: changes,
-      });
-      if (count === 0) {
-        return null;
+      await tx.message.update({ where: { id }, data: flags });
+      if (labelIds !== undefined) {
+        await replaceLabels(tx, id, labelIds);
       }
       const row = await tx.message.findUniqueOrThrow({
         where: { id },
@@ -220,22 +243,57 @@ export class PrismaMessageRepository implements MessageRepository {
     action: BatchAction,
   ): Promise<number | null> {
     const where = { id: { in: [...ids] }, accountId: ownerId };
-    if (action.kind === 'delete') {
-      const { count } = await this.prisma.message.deleteMany({ where });
-      return count;
+    switch (action.kind) {
+      case 'delete':
+        return (await this.prisma.message.deleteMany({ where })).count;
+      case 'label':
+      case 'unlabel':
+        return this.applyLabel(ownerId, ids, action);
+      default:
+        return this.prisma.$transaction(async (tx) => {
+          if (
+            action.kind === 'move' &&
+            !(await isOwnFolder(tx, ownerId, action.folderId))
+          ) {
+            return null;
+          }
+          const { count } = await tx.message.updateMany({
+            where,
+            data: batchChange(action),
+          });
+          return count;
+        });
     }
+  }
+
+  private applyLabel(
+    ownerId: MessageOwnerId,
+    ids: readonly MessageId[],
+    action: Extract<BatchAction, { kind: 'label' | 'unlabel' }>,
+  ): Promise<number | null> {
     return this.prisma.$transaction(async (tx) => {
-      if (
-        action.kind === 'move' &&
-        !(await isOwnFolder(tx, ownerId, action.folderId))
-      ) {
+      if (!(await areOwnLabels(tx, ownerId, [action.labelId]))) {
         return null;
       }
-      const { count } = await tx.message.updateMany({
-        where,
-        data: batchChange(action),
+      const own = await tx.message.findMany({
+        where: { id: { in: [...ids] }, accountId: ownerId },
+        select: { id: true },
       });
-      return count;
+      const messageIds = own.map((message) => message.id);
+      if (action.kind === 'label') {
+        await tx.messageLabel.createMany({
+          data: messageIds.map((messageId) => ({
+            messageId,
+            labelId: action.labelId,
+          })),
+          skipDuplicates: true,
+        });
+      } else {
+        await tx.messageLabel.deleteMany({
+          where: { messageId: { in: messageIds }, labelId: action.labelId },
+        });
+      }
+      return messageIds.length;
     });
   }
 
@@ -256,4 +314,28 @@ async function isOwnFolder(
     where: { id: folderId, accountId: ownerId },
   });
   return count > 0;
+}
+
+async function areOwnLabels(
+  client: Prisma.TransactionClient,
+  ownerId: MessageOwnerId,
+  labelIds: readonly MessageLabelId[],
+): Promise<boolean> {
+  const wanted = new Set(labelIds);
+  const count = await client.label.count({
+    where: { id: { in: [...wanted] }, accountId: ownerId },
+  });
+  return count === wanted.size;
+}
+
+async function replaceLabels(
+  tx: Prisma.TransactionClient,
+  messageId: MessageId,
+  labelIds: readonly MessageLabelId[],
+): Promise<void> {
+  await tx.messageLabel.deleteMany({ where: { messageId } });
+  await tx.messageLabel.createMany({
+    data: labelIds.map((labelId) => ({ messageId, labelId })),
+    skipDuplicates: true,
+  });
 }
