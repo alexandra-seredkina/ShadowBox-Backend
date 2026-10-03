@@ -92,6 +92,7 @@ describe('PrismaInboundMailStore', () => {
       encryptedPreview: blob(1, 60),
       body: blob(2, 1500),
       sender: SENDER,
+      isFromBlockedSender: false,
       ...overrides,
     };
   }
@@ -194,6 +195,32 @@ describe('PrismaInboundMailStore', () => {
       ]);
     });
 
+    it('files mail from a blocked sender in spam, whatever the address folder', async () => {
+      const folder = await prisma.folder.create({
+        data: { accountId: ownerId, kind: 'custom', encryptedName: {} },
+      });
+      const aliasId = await createAlias('k7f3mz9q2a', { folderId: folder.id });
+      await prisma.blockedSender.create({
+        data: {
+          accountId: ownerId,
+          senderHash: Uint8Array.from(SENDER.hash),
+          hashKeyVersion: 2,
+          encryptedAddress: {},
+        },
+      });
+
+      await expect(store.findSender(ownerId, SENDER)).resolves.toEqual({
+        isKnown: false,
+        isBlocked: true,
+      });
+      await store.save(newMessage(aliasId, { isFromBlockedSender: true }));
+
+      const row = await prisma.message.findFirstOrThrow({
+        include: { folder: { select: { systemRole: true } } },
+      });
+      expect(row.folder.systemRole).toBe('spam');
+    });
+
     it('marks when the address last received mail', async () => {
       const aliasId = await createAlias('k7f3mz9q2a');
 
@@ -208,11 +235,17 @@ describe('PrismaInboundMailStore', () => {
     it('remembers the sender once, so the next message is known', async () => {
       const aliasId = await createAlias('k7f3mz9q2a');
 
-      await expect(store.isKnownSender(ownerId, SENDER)).resolves.toBe(false);
+      await expect(store.findSender(ownerId, SENDER)).resolves.toEqual({
+        isKnown: false,
+        isBlocked: false,
+      });
       await store.save(newMessage(aliasId));
       await store.save(newMessage(aliasId));
 
-      await expect(store.isKnownSender(ownerId, SENDER)).resolves.toBe(true);
+      await expect(store.findSender(ownerId, SENDER)).resolves.toEqual({
+        isKnown: true,
+        isBlocked: false,
+      });
       expect(await prisma.knownSender.findMany()).toEqual([
         {
           accountId: ownerId,
@@ -229,7 +262,9 @@ describe('PrismaInboundMailStore', () => {
 
       await store.save(newMessage(aliasId));
 
-      await expect(store.isKnownSender(other, SENDER)).resolves.toBe(false);
+      await expect(store.findSender(other, SENDER)).resolves.toMatchObject({
+        isKnown: false,
+      });
     });
 
     it('stores a message without a sender address', async () => {

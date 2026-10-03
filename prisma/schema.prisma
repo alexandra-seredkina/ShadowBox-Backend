@@ -99,6 +99,7 @@ model Account {
   folders            Folder[]
   labels             Label[]
   messages           Message[]
+  blockedSenders     BlockedSender[]
   knownSenders       KnownSender[]
   idempotencyRecords IdempotencyRecord[]
 
@@ -264,6 +265,24 @@ model KnownSender {
 
   @@id([accountId, senderHash])
   @@map("known_senders")
+}
+
+/// Mail from these senders goes to Spam. The server keeps only an HMAC of
+/// the address; the client seals a copy so the owner can see the list.
+model BlockedSender {
+  id               String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  accountId        String   @map("account_id") @db.Uuid
+  senderHash       Bytes    @map("sender_hash")
+  hashKeyVersion   Int      @map("hash_key_version") @db.SmallInt
+  /// EncryptedBlob v1 with the address, sealed by the client.
+  encryptedAddress Json     @map("encrypted_address")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, senderHash])
+  @@index([accountId, createdAt(sort: Desc)])
+  @@map("blocked_senders")
 }
 
 /// One-time: consumed by deleting the row.

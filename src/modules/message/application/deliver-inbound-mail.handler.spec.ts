@@ -131,6 +131,17 @@ describe('DeliverInboundMailHandler', () => {
     });
   });
 
+  it('sends mail from a blocked sender to spam and still checks it', async () => {
+    store.block(RECIPIENT.ownerId, 'NEWS@shop.example');
+
+    await deliver();
+
+    expect(firstSaved()).toMatchObject({
+      isFromBlockedSender: true,
+      threat: { verdict: 'caution', markers: ['UNKNOWN_SENDER'] },
+    });
+  });
+
   it('drops the message when the address stopped being deliverable', async () => {
     await handler.execute({
       mail: inboundMail(),

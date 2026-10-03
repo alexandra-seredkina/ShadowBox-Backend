@@ -2,11 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { Clock } from '../../../shared/kernel/clock.js';
 import { ContentSealer } from '../domain/content-sealer.js';
 import type { InboundMail, InboundRecipient } from '../domain/inbound-mail.js';
-import { InboundMailStore } from '../domain/inbound-mail.store.js';
+import {
+  InboundMailStore,
+  SenderStatus,
+} from '../domain/inbound-mail.store.js';
 import { roundUpToKiB } from '../domain/message.js';
 import { previewOf } from '../domain/preview.js';
 import { SenderHash, SenderHasher } from '../domain/sender-hasher.js';
 import { assessThreat } from '../domain/threat.js';
+
+/** Mail without a sender address is never known and cannot be blocked. */
+const NO_SENDER: SenderStatus = { isKnown: false, isBlocked: false };
 
 /**
  * Seals a message for one recipient and stores it. Plaintext stays in memory:
@@ -35,12 +41,13 @@ export class DeliverInboundMailHandler {
       return;
     }
     const sender = this.senderOf(mail, recipient);
-    const isKnownSender =
-      sender !== null &&
-      (await this.store.isKnownSender(recipient.ownerId, sender));
+    const status =
+      sender === null
+        ? NO_SENDER
+        : await this.store.findSender(recipient.ownerId, sender);
     const threat = assessThreat({
       auth: mail.auth,
-      isKnownSender,
+      isKnownSender: status.isKnown,
       from: mail.parsed.from,
       links: mail.parsed.links,
       attachments: mail.parsed.attachments,
@@ -57,6 +64,7 @@ export class DeliverInboundMailHandler {
       encryptedPreview,
       body: this.sealer.seal(mailbox.publicKey, mail.raw),
       sender,
+      isFromBlockedSender: status.isBlocked,
     });
   }
 

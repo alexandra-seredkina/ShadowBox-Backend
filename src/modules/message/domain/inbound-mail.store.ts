@@ -7,6 +7,12 @@ export interface Mailbox {
   readonly publicKey: Uint8Array;
 }
 
+export interface SenderStatus {
+  /** The account has had mail from this sender before. */
+  readonly isKnown: boolean;
+  readonly isBlocked: boolean;
+}
+
 export interface NewMessage {
   readonly ownerId: MessageOwnerId;
   readonly aliasId: MessageAliasId;
@@ -17,6 +23,8 @@ export interface NewMessage {
   readonly body: EncryptedBlob;
   /** Null when the message has no sender address to remember. */
   readonly sender: SenderHash | null;
+  /** Blocked mail goes to Spam instead of the address's folder. */
+  readonly isFromBlockedSender: boolean;
 }
 
 export abstract class InboundMailStore {
@@ -26,14 +34,14 @@ export abstract class InboundMailStore {
     aliasId: MessageAliasId,
   ): Promise<Mailbox | null>;
 
-  abstract isKnownSender(
+  abstract findSender(
     ownerId: MessageOwnerId,
     sender: SenderHash,
-  ): Promise<boolean>;
+  ): Promise<SenderStatus>;
 
   /**
-   * One transaction: files the message in the address's folder (the inbox
-   * when it has none), puts the address's labels on it, remembers the sender
+   * One transaction: files the message in Spam when the sender is blocked,
+   * otherwise in the address's folder (the inbox when it has none), puts the address's labels on it, remembers the sender
    * and marks when the address last received mail.
    */
   abstract save(message: NewMessage): Promise<void>;

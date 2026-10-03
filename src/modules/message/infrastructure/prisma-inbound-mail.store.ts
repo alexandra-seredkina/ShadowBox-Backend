@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../../../generated/prisma/client.js';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service.js';
 import { toEncryptedBlobJson } from '../../../shared/http/api-format.js';
-import type { Mailbox, NewMessage } from '../domain/inbound-mail.store.js';
+import type {
+  Mailbox,
+  NewMessage,
+  SenderStatus,
+} from '../domain/inbound-mail.store.js';
 import { InboundMailStore } from '../domain/inbound-mail.store.js';
 import type { MessageAliasId, MessageOwnerId } from '../domain/message.js';
 import type { SenderHash } from '../domain/sender-hasher.js';
@@ -22,14 +26,19 @@ export class PrismaInboundMailStore implements InboundMailStore {
     return row?.account ?? null;
   }
 
-  async isKnownSender(
+  async findSender(
     ownerId: MessageOwnerId,
     sender: SenderHash,
-  ): Promise<boolean> {
-    const count = await this.prisma.knownSender.count({
-      where: { accountId: ownerId, senderHash: Uint8Array.from(sender.hash) },
-    });
-    return count > 0;
+  ): Promise<SenderStatus> {
+    const where = {
+      accountId: ownerId,
+      senderHash: Uint8Array.from(sender.hash),
+    };
+    const [known, blocked] = await Promise.all([
+      this.prisma.knownSender.count({ where }),
+      this.prisma.blockedSender.count({ where }),
+    ]);
+    return { isKnown: known > 0, isBlocked: blocked > 0 };
   }
 
   async save(message: NewMessage): Promise<void> {
@@ -42,7 +51,10 @@ export class PrismaInboundMailStore implements InboundMailStore {
       const created = await tx.message.create({
         data: messageRow(
           message,
-          alias.folderId ?? (await inboxOf(tx, message.ownerId)),
+          message.isFromBlockedSender
+            ? await systemFolderOf(tx, message.ownerId, 'spam')
+            : (alias.folderId ??
+                (await systemFolderOf(tx, message.ownerId, 'inbox'))),
         ),
         select: { id: true },
       });
@@ -66,17 +78,16 @@ export class PrismaInboundMailStore implements InboundMailStore {
   }
 }
 
-async function inboxOf(
+async function systemFolderOf(
   tx: Prisma.TransactionClient,
   ownerId: MessageOwnerId,
+  systemRole: 'inbox' | 'spam',
 ): Promise<string> {
-  const inbox = await tx.folder.findUniqueOrThrow({
-    where: {
-      accountId_systemRole: { accountId: ownerId, systemRole: 'inbox' },
-    },
+  const folder = await tx.folder.findUniqueOrThrow({
+    where: { accountId_systemRole: { accountId: ownerId, systemRole } },
     select: { id: true },
   });
-  return inbox.id;
+  return folder.id;
 }
 
 function messageRow(

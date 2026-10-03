@@ -19,5 +19,6 @@ export const REDACT_PATHS: readonly string[] = [
     'sealedKey',
     'ciphertext',
     'ip',
+    'address',
   ].flatMap((field) => [field, `*.${field}`]),
 ];

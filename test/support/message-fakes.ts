@@ -9,6 +9,7 @@ import {
   InboundMailStore,
   Mailbox,
   NewMessage,
+  SenderStatus,
 } from '../../src/modules/message/domain/inbound-mail.store.js';
 import { MailAuthenticator } from '../../src/modules/message/domain/mail-authenticator.js';
 import { MailParser } from '../../src/modules/message/domain/mail-parser.js';
@@ -98,6 +99,7 @@ export class InMemoryInboundMailStore extends InboundMailStore {
   readonly saved: NewMessage[] = [];
   private readonly mailboxes = new Map<string, Mailbox>();
   private readonly knownSenders = new Set<string>();
+  private readonly blockedSenders = new Set<string>();
   /** Saving for this address fails, as a broken database would. */
   failingAliasId: string | null = null;
 
@@ -112,8 +114,22 @@ export class InMemoryInboundMailStore extends InboundMailStore {
     return Promise.resolve(this.mailboxes.get(`${ownerId}/${aliasId}`) ?? null);
   }
 
-  isKnownSender(ownerId: MessageOwnerId, sender: SenderHash): Promise<boolean> {
-    return Promise.resolve(this.knownSenders.has(senderKey(ownerId, sender)));
+  /** As PlainSenderHasher hashes it. */
+  block(ownerId: MessageOwnerId, address: string): void {
+    this.blockedSenders.add(
+      senderKey(ownerId, new PlainSenderHasher().hash(ownerId, address)),
+    );
+  }
+
+  findSender(
+    ownerId: MessageOwnerId,
+    sender: SenderHash,
+  ): Promise<SenderStatus> {
+    const key = senderKey(ownerId, sender);
+    return Promise.resolve({
+      isKnown: this.knownSenders.has(key),
+      isBlocked: this.blockedSenders.has(key),
+    });
   }
 
   save(message: NewMessage): Promise<void> {
